@@ -23,4 +23,16 @@ SECTION_FIELDS: list[tuple[str, str]] = [
     ("projects", "Projects"),
 ]
 
+# Section types produced by the weblinks crawl/extract job, stored under
+# gs://$KMP_GCS_BUCKET/weblinks/{slug}.json. Mapped to human labels for chunk headers.
+# Vector IDs are {slug}#{section_type}, so these must not collide with SECTION_FIELDS.
+ENRICHMENT_LABELS: dict[str, str] = {
+    "website_summary": "Website summary",
+    "current_projects": "Current projects",
+    "recent_publications": "Recent publications",
+    "students_or_lab_members": "Students and lab members",
+    "recent_news": "Recent news",
+}
+
 UPSERT_BATCH_SIZE = 100
+FETCH_BATCH_SIZE = 100

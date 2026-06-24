@@ -7,7 +7,7 @@ import time
 from pinecone import Pinecone, ServerlessSpec
 
 from chunking import Chunk
-from config import UPSERT_BATCH_SIZE
+from config import FETCH_BATCH_SIZE, UPSERT_BATCH_SIZE
 
 
 def fetch_existing_vector_ids(index) -> set[str]:
@@ -16,6 +16,27 @@ def fetch_existing_vector_ids(index) -> set[str]:
     for batch in index.list():
         existing.update(batch)
     return existing
+
+
+def fetch_existing_hashes(index, ids: list[str]) -> dict[str, str]:
+    """Map vector_id -> stored content_hash for the given IDs already in the index.
+
+    IDs not present in the index (or lacking a content_hash) are simply absent
+    from the result, so a plain ``.get(id) != new_hash`` check treats them as
+    needing (re-)embedding.
+    """
+    hashes: dict[str, str] = {}
+    unique = list(dict.fromkeys(ids))
+    for i in range(0, len(unique), FETCH_BATCH_SIZE):
+        batch = unique[i : i + FETCH_BATCH_SIZE]
+        resp = index.fetch(ids=batch)
+        vectors = getattr(resp, "vectors", None) or {}
+        for vid, vec in vectors.items():
+            meta = getattr(vec, "metadata", None) or {}
+            stored = meta.get("content_hash")
+            if stored:
+                hashes[vid] = stored
+    return hashes
 
 
 def get_or_create_index(
