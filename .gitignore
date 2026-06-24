@@ -1,0 +1,31 @@
+# --- Secrets (NEVER commit) ---
+.env
+*.env
+secrets/
+*-key.json
+*-credentials.json
+service-account*.json
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# --- Local scraper output (GCS is source of truth) ---
+scraper/data/
+
+# --- OS / editor ---
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# --- Coding ---
+/CLAUDE.md
+/system_architecture.md
