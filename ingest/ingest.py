@@ -5,15 +5,15 @@ For each profile in gs://$KMP_GCS_BUCKET/profiles/*.json:
   - skip if it has no biography / research_interests / areas_of_interest
   - emit one chunk per populated section (biography, research_interests, education,
     areas_of_interest, labs_and_groups, projects)
-  - embed with Gemini gemini-embedding-001 (3072 dim)
+  - embed with Mistral mistral-embed-2312 (1024 dim), batched
   - upsert into Pinecone with deterministic id `{slug}#{section}`
 
 Required env:
   KMP_GCS_BUCKET     — source bucket (e.g. know-my-professor-raw)
-  GEMINI_API_KEY     — Google AI Studio API key
+  MISTRAL_API_KEY    — Mistral API key (embeddings)
   PINECONE_API_KEY   — Pinecone API key
 Optional env:
-  PINECONE_INDEX_NAME (default: know-my-professor)
+  PINECONE_INDEX_NAME (default: know-my-professor-m1024)
   PINECONE_REGION     (default: us-east-1)
   PINECONE_CLOUD      (default: aws)
 
@@ -25,7 +25,7 @@ Usage:
 Module layout:
   config.py          shared constants
   chunking.py        Chunk + profile -> chunks
-  embedding.py       Gemini embedding (rate-limited)
+  embedding.py       Mistral embedding (batched, rate-limited)
   gcs.py             load profiles from GCS
   pinecone_store.py  index management + upsert
   ingest.py          orchestration (this file)
@@ -37,10 +37,9 @@ import argparse
 import os
 import sys
 
-import google.generativeai as genai
 from pinecone import Pinecone
 
-from chunking import Chunk, is_substantive, profile_to_chunks
+from chunking import Chunk, enrichment_to_chunks, is_substantive, profile_to_chunks
 from config import (
     EMBED_DIM,
     PINECONE_DEFAULT_CLOUD,
@@ -48,9 +47,9 @@ from config import (
     PINECONE_DEFAULT_REGION,
 )
 from embedding import embed_texts
-from gcs import load_profiles_from_gcs
+from gcs import load_enrichment_from_gcs, load_profiles_from_gcs
 from pinecone_store import (
-    fetch_existing_vector_ids,
+    fetch_existing_hashes,
     get_or_create_index,
     upsert_in_batches,
 )
@@ -92,7 +91,19 @@ def main() -> None:
     all_chunks: list[Chunk] = []
     for p in substantive:
         all_chunks.extend(profile_to_chunks(p))
-    print(f"Total chunks: {len(all_chunks)}")
+    profile_chunk_count = len(all_chunks)
+
+    # Fold in weblinks enrichment for the profiles we loaded (respects --limit).
+    loaded_slugs = {p.get("slug") for p in profiles}
+    enrichment_chunks: list[Chunk] = []
+    for enriched in load_enrichment_from_gcs(args.bucket):
+        if enriched.get("slug") in loaded_slugs:
+            enrichment_chunks.extend(enrichment_to_chunks(enriched))
+    all_chunks.extend(enrichment_chunks)
+    print(
+        f"Total chunks: {len(all_chunks)} "
+        f"({profile_chunk_count} profile + {len(enrichment_chunks)} weblinks)"
+    )
     if not all_chunks:
         print("Nothing to ingest.")
         return
@@ -106,10 +117,8 @@ def main() -> None:
                 print("...")
         return
 
-    gemini_key = os.environ.get("GEMINI_API_KEY")
-    if not gemini_key:
-        sys.exit("error: GEMINI_API_KEY env required for real run")
-    genai.configure(api_key=gemini_key)
+    if not os.environ.get("MISTRAL_API_KEY"):
+        sys.exit("error: MISTRAL_API_KEY env required for real run")
 
     pinecone_key = os.environ.get("PINECONE_API_KEY")
     if not pinecone_key:
@@ -124,17 +133,24 @@ def main() -> None:
         os.environ.get("PINECONE_REGION", PINECONE_DEFAULT_REGION),
     )
 
-    existing_ids = fetch_existing_vector_ids(index)
-    pending = [c for c in all_chunks if c.vector_id not in existing_ids]
+    # Hash-aware skip: embed a chunk only if its id is new OR its text changed
+    # since last ingest. Unchanged chunks (same content_hash) are skipped, so a
+    # re-run on identical data embeds nothing — no wasteful re-embedding.
+    existing_hashes = fetch_existing_hashes(index, [c.vector_id for c in all_chunks])
+    pending = [
+        c for c in all_chunks
+        if existing_hashes.get(c.vector_id) != c.metadata["content_hash"]
+    ]
+    changed = sum(1 for c in pending if c.vector_id in existing_hashes)
     print(
-        f"\n{len(existing_ids)} vectors already in Pinecone; "
-        f"{len(pending)}/{len(all_chunks)} chunks need embedding."
+        f"\n{len(existing_hashes)} of {len(all_chunks)} chunks already in Pinecone; "
+        f"{len(pending)} need embedding ({len(pending) - changed} new, {changed} changed)."
     )
     if not pending:
         print("Nothing to embed. Done.")
         return
 
-    print("Embedding + upserting (paced for 100 RPM)...")
+    print("Embedding + upserting (Mistral, batched)...")
     SLICE = 25
     for i in range(0, len(pending), SLICE):
         batch = pending[i : i + SLICE]

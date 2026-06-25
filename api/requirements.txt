@@ -1,5 +1,6 @@
 fastapi==0.115.5
 uvicorn[standard]==0.32.1
-google-generativeai==0.8.3
+llama-api-client==0.6.0
+mistralai==1.9.10
 pinecone==5.4.2
 pydantic==2.10.3
