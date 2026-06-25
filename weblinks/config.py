@@ -30,8 +30,11 @@ MIN_CLEAN_TEXT_CHARS = 200
 MAX_CLEAN_TEXT_CHARS = 20_000
 
 # Gemini extraction (Google AI Studio free tier).
-GEMINI_MODEL = "gemini-2.5-flash"
-GEMINI_RATE_LIMIT_SLEEP_SECONDS = 1.0
+# gemini-3.1-flash-lite: 500 RPD (covers ~296 faculty-with-sites in one pass),
+# 15 RPM, 250K TPM. Still a Gemini model, so response_schema works (unlike Gemma).
+GEMINI_MODEL = "models/gemini-3.1-flash-lite"
+# 60s / 15 RPM = 4s min spacing to stay under the per-minute cap.
+GEMINI_RATE_LIMIT_SLEEP_SECONDS = 4.0
 GEMINI_MAX_RETRIES = 6
 
 # Bumping this forces re-extraction even when a page's text is unchanged, so

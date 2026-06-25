@@ -62,6 +62,25 @@ def _install_stubs() -> None:
         p.ServerlessSpec = _ServerlessSpec
         sys.modules["pinecone"] = p
 
+    if _missing("mistralai", "Mistral"):
+        m = types.ModuleType("mistralai")
+
+        class _Mistral:  # pragma: no cover - not exercised by unit tests
+            def __init__(self, *a, **k):
+                pass
+
+        m.Mistral = _Mistral
+        sys.modules["mistralai"] = m
+
+        models = types.ModuleType("mistralai.models")
+
+        class _SDKError(Exception):  # pragma: no cover
+            status_code = None
+
+        models.SDKError = _SDKError
+        m.models = models
+        sys.modules["mistralai.models"] = models
+
     if _missing("trafilatura"):
         t = types.ModuleType("trafilatura")
         t.extract = lambda html, **kw: None  # tests monkeypatch this

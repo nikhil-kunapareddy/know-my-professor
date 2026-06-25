@@ -5,15 +5,15 @@ For each profile in gs://$KMP_GCS_BUCKET/profiles/*.json:
   - skip if it has no biography / research_interests / areas_of_interest
   - emit one chunk per populated section (biography, research_interests, education,
     areas_of_interest, labs_and_groups, projects)
-  - embed with Gemini gemini-embedding-001 (3072 dim)
+  - embed with Mistral mistral-embed-2312 (1024 dim), batched
   - upsert into Pinecone with deterministic id `{slug}#{section}`
 
 Required env:
   KMP_GCS_BUCKET     — source bucket (e.g. know-my-professor-raw)
-  GEMINI_API_KEY     — Google AI Studio API key
+  MISTRAL_API_KEY    — Mistral API key (embeddings)
   PINECONE_API_KEY   — Pinecone API key
 Optional env:
-  PINECONE_INDEX_NAME (default: know-my-professor)
+  PINECONE_INDEX_NAME (default: know-my-professor-m1024)
   PINECONE_REGION     (default: us-east-1)
   PINECONE_CLOUD      (default: aws)
 
@@ -25,7 +25,7 @@ Usage:
 Module layout:
   config.py          shared constants
   chunking.py        Chunk + profile -> chunks
-  embedding.py       Gemini embedding (rate-limited)
+  embedding.py       Mistral embedding (batched, rate-limited)
   gcs.py             load profiles from GCS
   pinecone_store.py  index management + upsert
   ingest.py          orchestration (this file)
@@ -37,7 +37,6 @@ import argparse
 import os
 import sys
 
-import google.generativeai as genai
 from pinecone import Pinecone
 
 from chunking import Chunk, enrichment_to_chunks, is_substantive, profile_to_chunks
@@ -118,10 +117,8 @@ def main() -> None:
                 print("...")
         return
 
-    gemini_key = os.environ.get("GEMINI_API_KEY")
-    if not gemini_key:
-        sys.exit("error: GEMINI_API_KEY env required for real run")
-    genai.configure(api_key=gemini_key)
+    if not os.environ.get("MISTRAL_API_KEY"):
+        sys.exit("error: MISTRAL_API_KEY env required for real run")
 
     pinecone_key = os.environ.get("PINECONE_API_KEY")
     if not pinecone_key:
@@ -153,7 +150,7 @@ def main() -> None:
         print("Nothing to embed. Done.")
         return
 
-    print("Embedding + upserting (paced for 100 RPM)...")
+    print("Embedding + upserting (Mistral, batched)...")
     SLICE = 25
     for i in range(0, len(pending), SLICE):
         batch = pending[i : i + SLICE]

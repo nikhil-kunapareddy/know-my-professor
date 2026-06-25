@@ -21,7 +21,9 @@ steps:
       - --all-tags
       - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kmp-api
 
-  # 3. Deploy. --image keeps existing env vars (GEMINI/PINECONE keys) and runtime SA.
+  # 3. Deploy. --image keeps existing env vars (MISTRAL/LLAMA/PINECONE keys +
+  #    PINECONE_INDEX_NAME) and runtime SA — they must already be set on the
+  #    service (via gcloud run deploy --set-env-vars; CI never sets them).
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: gcloud
     args:

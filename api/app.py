@@ -5,11 +5,12 @@ POST /chat   { "question": "..." }
 GET  /health
 
 Required env:
-  GEMINI_API_KEY
+  LLAMA_API_KEY      (chat model — Meta Llama API)
+  MISTRAL_API_KEY    (query embedding — must match the ingest embedder)
   PINECONE_API_KEY
 Optional env:
-  PINECONE_INDEX_NAME  (default: know-my-professor)
-  GEMINI_CHAT_MODEL    (default: models/gemini-2.5-flash)
+  PINECONE_INDEX_NAME  (default: know-my-professor-m1024)
+  LLAMA_CHAT_MODEL     (default: Llama-4-Maverick-17B-128E-Instruct-FP8)
   TOP_K                (default: 8)
 """
 
@@ -19,14 +20,16 @@ import os
 from contextlib import asynccontextmanager
 from typing import Any
 
-import google.generativeai as genai
 from fastapi import FastAPI, HTTPException
+from llama_api_client import LlamaAPIClient
+from mistralai import Mistral
 from pinecone import Pinecone
 from pydantic import BaseModel, Field
 
-EMBED_MODEL = "models/gemini-embedding-001"
-DEFAULT_CHAT_MODEL = "models/gemini-2.5-flash"
-DEFAULT_INDEX = "know-my-professor"
+# Query embeddings MUST use the same model/dim as the ingest job (ingest/config.py).
+EMBED_MODEL = "mistral-embed-2312"
+DEFAULT_CHAT_MODEL = "Llama-4-Maverick-17B-128E-Instruct-FP8"
+DEFAULT_INDEX = "know-my-professor-m1024"
 DEFAULT_TOP_K = 8
 
 SYSTEM_INSTRUCTION = """\
@@ -64,22 +67,20 @@ state: dict[str, Any] = {}
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    gemini_key = _require_env("GEMINI_API_KEY")
+    llama_key = _require_env("LLAMA_API_KEY")
+    mistral_key = _require_env("MISTRAL_API_KEY")
     pinecone_key = _require_env("PINECONE_API_KEY")
 
-    genai.configure(api_key=gemini_key)
-    chat_model_name = os.environ.get("GEMINI_CHAT_MODEL", DEFAULT_CHAT_MODEL)
-    state["chat_model"] = genai.GenerativeModel(
-        chat_model_name,
-        system_instruction=SYSTEM_INSTRUCTION,
-    )
+    state["llama"] = LlamaAPIClient(api_key=llama_key)
+    state["chat_model"] = os.environ.get("LLAMA_CHAT_MODEL", DEFAULT_CHAT_MODEL)
+    state["mistral"] = Mistral(api_key=mistral_key)
 
     pc = Pinecone(api_key=pinecone_key)
     index_name = os.environ.get("PINECONE_INDEX_NAME", DEFAULT_INDEX)
     state["index"] = pc.Index(index_name)
     state["top_k"] = int(os.environ.get("TOP_K", DEFAULT_TOP_K))
 
-    print(f"Ready. chat_model={chat_model_name} index={index_name} top_k={state['top_k']}")
+    print(f"Ready. chat_model={state['chat_model']} index={index_name} top_k={state['top_k']}")
     yield
 
 
@@ -101,11 +102,10 @@ def health() -> dict[str, str]:
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest) -> ChatResponse:
     try:
-        query_embedding = genai.embed_content(
+        query_embedding = state["mistral"].embeddings.create(
             model=EMBED_MODEL,
-            content=req.question,
-            task_type="retrieval_query",
-        )["embedding"]
+            inputs=[req.question],
+        ).data[0].embedding
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"embedding failed: {e}") from e
 
@@ -144,15 +144,22 @@ def chat(req: ChatRequest) -> ChatResponse:
             )
         )
 
-    prompt = (
+    user_content = (
         "Context:\n"
         + "\n\n".join(context_blocks)
         + f"\n\nQuestion: {req.question}\n"
     )
 
     try:
-        response = state["chat_model"].generate_content(prompt)
-        answer = (response.text or "").strip()
+        response = state["llama"].chat.completions.create(
+            model=state["chat_model"],
+            messages=[
+                {"role": "system", "content": SYSTEM_INSTRUCTION},
+                {"role": "user", "content": user_content},
+            ],
+            temperature=0.0,
+        )
+        answer = (response.completion_message.content.text or "").strip()
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"chat model failed: {e}") from e
 
