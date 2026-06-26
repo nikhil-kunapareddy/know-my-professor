@@ -1,0 +1,45 @@
+# Cloud Build config for the kmp-api Cloud Run service.
+# Fired by the deploy-kmp-api trigger on pushes to main.
+# Build context is the REPO ROOT; the single deploy/Dockerfile is selected with
+# --build-arg COMPONENT=api.
+#
+# NOTE: widen the trigger's included-files filter to rebuild kmp-api when any of
+# its code changes: serving/api/**, core/**, shared/**, deploy/**, pyproject.toml.
+
+steps:
+  # 1. Build the api image from deploy/Dockerfile.
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --build-arg
+      - COMPONENT=api
+      - -f
+      - deploy/Dockerfile
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kmp-api:$COMMIT_SHA
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kmp-api:latest
+      - .
+
+  # 2. Push both tags (deploy below references the pushed :$COMMIT_SHA).
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - --all-tags
+      - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kmp-api
+
+  # 3. Deploy. --image keeps existing env vars (MISTRAL/LLAMA/PINECONE keys +
+  #    PINECONE_INDEX_NAME) and runtime SA — they must already be set on the
+  #    service (CI never sets them).
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - kmp-api
+      - --image=us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kmp-api:$COMMIT_SHA
+      - --region=us-central1
+      - --project=$PROJECT_ID
+
+options:
+  logging: CLOUD_LOGGING_ONLY

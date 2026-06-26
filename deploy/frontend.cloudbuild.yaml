@@ -1,0 +1,43 @@
+# Cloud Build config for the kmp-frontend Cloud Run service.
+# Fired by the deploy-kmp-frontend trigger on pushes to main.
+# Build context is the REPO ROOT; the single deploy/Dockerfile is selected with
+# --build-arg COMPONENT=frontend.
+#
+# NOTE: widen the trigger's included-files filter to: serving/frontend/**,
+# deploy/**, pyproject.toml.
+
+steps:
+  # 1. Build the frontend image from deploy/Dockerfile.
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --build-arg
+      - COMPONENT=frontend
+      - -f
+      - deploy/Dockerfile
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kmp-frontend:$COMMIT_SHA
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kmp-frontend:latest
+      - .
+
+  # 2. Push both tags (deploy below references the pushed :$COMMIT_SHA).
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - --all-tags
+      - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kmp-frontend
+
+  # 3. Deploy. --image keeps existing env vars (KMP_API_URL) and runtime SA.
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - kmp-frontend
+      - --image=us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/kmp-frontend:$COMMIT_SHA
+      - --region=us-central1
+      - --project=$PROJECT_ID
+
+options:
+  logging: CLOUD_LOGGING_ONLY

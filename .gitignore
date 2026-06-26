@@ -18,7 +18,7 @@ env/
 .mypy_cache/
 
 # --- Local scraper output (GCS is source of truth) ---
-scraper/data/
+/data/
 
 # --- OS / editor ---
 .DS_Store

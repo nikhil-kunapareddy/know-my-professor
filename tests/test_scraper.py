@@ -1,8 +1,9 @@
-"""Unit tests for the scraper HTML parsing (profile_parser + fetcher discovery)."""
+"""Unit tests for the profile scraper (ProfileParser + DirectoryFetcher discovery)."""
 
 from __future__ import annotations
 
-import pytest
+from preprocessing.sources.profiles.fetcher import DirectoryFetcher
+from preprocessing.sources.profiles.profile_parser import ProfileParser
 
 PROFILE_HTML = """
 <html><body>
@@ -29,21 +30,11 @@ PROFILE_HTML = """
 </body></html>
 """
 
-
-@pytest.fixture
-def profile_parser(load):
-    return load("scraper", "profile_parser")
+URL = "https://www.khoury.northeastern.edu/people/jane-doe/"
 
 
-@pytest.fixture
-def fetcher(load):
-    return load("scraper", "fetcher")
-
-
-def test_parse_profile_header_fields(profile_parser):
-    p = profile_parser.parse_profile(
-        "https://www.khoury.northeastern.edu/people/jane-doe/", PROFILE_HTML
-    )
+def test_parse_profile_header_fields():
+    p = ProfileParser().parse(URL, PROFILE_HTML)
     assert p.slug == "jane-doe"
     assert p.name == "Jane Doe"
     assert p.pronouns == "she/her"
@@ -52,27 +43,23 @@ def test_parse_profile_header_fields(profile_parser):
     assert p.roles == ["Faculty", "Researcher"]
 
 
-def test_parse_profile_aside_fields(profile_parser):
-    p = profile_parser.parse_profile(
-        "https://www.khoury.northeastern.edu/people/jane-doe/", PROFILE_HTML
-    )
+def test_parse_profile_aside_fields():
+    p = ProfileParser().parse(URL, PROFILE_HTML)
     assert p.campuses == ["Boston"]
     assert p.websites == [{"text": "jane.example", "href": "https://jane.example/"}]
     assert p.google_scholar == "https://scholar.google.com/x"
     assert p.areas_of_interest == ["Programming Languages"]
 
 
-def test_parse_profile_accordion_sections(profile_parser):
-    p = profile_parser.parse_profile(
-        "https://www.khoury.northeastern.edu/people/jane-doe/", PROFILE_HTML
-    )
+def test_parse_profile_accordion_sections():
+    p = ProfileParser().parse(URL, PROFILE_HTML)
     assert p.biography == "Jane works on PL."
     assert p.research_interests == ["Types", "Compilers"]
     assert p.education == []  # absent section -> empty list
 
 
-def test_parse_profile_handles_empty_html(profile_parser):
-    p = profile_parser.parse_profile(
+def test_parse_profile_handles_empty_html():
+    p = ProfileParser().parse(
         "https://www.khoury.northeastern.edu/people/empty/", "<html></html>"
     )
     assert p.slug == "empty"
@@ -81,24 +68,24 @@ def test_parse_profile_handles_empty_html(profile_parser):
     assert p.biography is None
 
 
-def test_extract_total_pages(fetcher):
+def test_extract_total_pages():
     html = """
       <a class="page-numbers" href="https://www.khoury.northeastern.edu/people/page/2/">2</a>
       <a class="page-numbers" href="https://www.khoury.northeastern.edu/people/page/5/">5</a>
       <a class="page-numbers" href="https://www.khoury.northeastern.edu/people/page/3/">3</a>
     """
-    assert fetcher.extract_total_pages(html) == 5
-    assert fetcher.extract_total_pages("<html></html>") == 1  # no pagination -> 1
+    assert DirectoryFetcher.extract_total_pages(html) == 5
+    assert DirectoryFetcher.extract_total_pages("<html></html>") == 1  # no pagination -> 1
 
 
-def test_extract_profile_urls_matches_only_profile_slugs(fetcher):
+def test_extract_profile_urls_matches_only_profile_slugs():
     html = """
       <a href="https://www.khoury.northeastern.edu/people/jane-doe/">a</a>
       <a href="https://www.khoury.northeastern.edu/people/john-smith/">b</a>
       <a href="https://www.khoury.northeastern.edu/people/page/2/">paginate</a>
       <a href="https://other.com/people/x/">external</a>
     """
-    urls = fetcher.extract_profile_urls(html)
+    urls = DirectoryFetcher.extract_profile_urls(html)
     assert urls == {
         "https://www.khoury.northeastern.edu/people/jane-doe/",
         "https://www.khoury.northeastern.edu/people/john-smith/",

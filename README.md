@@ -1,67 +1,56 @@
 # Know My Professor
 
 A RAG chatbot over [Northeastern Khoury](https://www.khoury.northeastern.edu/people/)
-faculty profiles. Ask questions like *"who at Khoury works on programming languages?"*
-and get cited answers.
+faculty profiles. Ask *"who at Khoury works on programming languages?"* and get
+cited answers.
 
-- **Live website:** https://kmp-frontend-309233821309.us-central1.run.app
+- **Website:** https://kmp-frontend-309233821309.us-central1.run.app
 - **API:** https://kmp-api-309233821309.us-central1.run.app
 
 ## Architecture
 
 ```
-[Cloud Scheduler: monthly-scrape]
-        |
-        v  (OAuth as kmp-scheduler SA)
-[Cloud Run Job: scrape-khoury] --runs as kmp-scraper SA--> [GCS: gs://know-my-professor-raw]
-                                                              |
-                                                              v
-                                                   chunk + embed -> [Pinecone index]
+scrape Khoury directory ──► gs://know-my-professor-raw/profiles/{slug}.json
+crawl faculty sites + Gemini extract ──► .../weblinks/{slug}.json
+ingest: chunk + Mistral embed (1024d) ──► Pinecone (know-my-professor-m1024)
 
-[User] -> [Streamlit on Cloud Run] -> [/chat API on Cloud Run]
-                                          | embed query (Gemini gemini-embedding-001)
-                                          v
-                                       [Pinecone similarity search]
-                                          | top-K chunks + prompt
-                                          v
-                                       [Gemini 2.5 Flash] -> answer + citations
+User ─► Streamlit ─► /chat API:  Mistral query embed ─► Pinecone top-K
+                                 ─► Llama-4-Maverick ─► answer + citations
 ```
+
+Three Cloud Run **Jobs** (scrape, weblinks, ingest) run on monthly crons; two
+Cloud Run **Services** (api, frontend) auto-deploy from `main` via Cloud Build.
 
 ## Repo layout
 
-| Directory   | Phase | Purpose                                                        | Deploys to                       |
-|-------------|-------|---------------------------------------------------------------|----------------------------------|
-| `scraper/`  | 1–5   | Discovers `/people/` URLs, parses profiles into JSON          | Cloud Run **Job** `scrape-khoury`   |
-| `ingest/`   | 6     | Chunk + embed + upsert into Pinecone (resumable)              | Cloud Run **Job** `ingest-pinecone` |
-| `api/`      | 7     | FastAPI `POST /chat`, `GET /health`                           | Cloud Run **Service** `kmp-api`     |
-| `frontend/` | 8     | Streamlit chat UI; POSTs to `{KMP_API_URL}/chat`             | Cloud Run **Service** `kmp-frontend`|
+```
+core/           RAG brain — pipeline, query (embed), retrieval (Pinecone), llm (Llama)
+preprocessing/  sources/profiles (scrape) · sources/weblinks (crawl+extract) · ingest
+shared/         config.py (single source of truth) · gcs.py
+serving/        api/app.py (FastAPI) · frontend/app.py (Streamlit)
+deploy/         one Dockerfile (--build-arg COMPONENT) + Cloud Build configs
+tests/          offline pytest + opt-in live e2e
+```
 
-Each component has its own pinned `requirements.txt` and `Dockerfile`. The root
-`requirements.txt` is an aggregate for local development only.
+One installable package; five deployables built from the single `deploy/Dockerfile`.
 
 ## Local setup
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt        # installs all component extras (editable)
+python -m pytest tests/ -q             # offline tests
+python -m preprocessing.sources.profiles.runner --limit 5   # run a stage locally
 ```
 
-Secrets live in `ingest/.env` (gitignored): `GEMINI_API_KEY`, `PINECONE_API_KEY`.
-In Cloud Run these are set as environment variables on the service/job, not committed.
+Secrets live in repo-root `.env` (gitignored): `MISTRAL_API_KEY`,
+`PINECONE_API_KEY`, `LLAMA_API_KEY`, `GEMINI_API_KEY`. In Cloud Run these are env
+vars on the service/job, never committed.
 
-## Constraints
+## Stack & constraints
 
-- **GCP only** for storage and compute.
-- **Zero cost**: everything stays inside free tiers. Gemini via Google AI Studio
-  (not Vertex AI), GCS in `us-central1`, Pinecone serverless free tier.
-- **Production-level**: dedicated least-privilege service accounts, idempotent
-  scrape, automated monthly refresh crons, structured data.
-
-## Pinecone
-
-- Index `know-my-professor`, serverless on **aws/us-east-1**, dim **3072**
-  (`gemini-embedding-001`), metric cosine.
-- Vector ID convention: `{slug}#{section_type}`.
-
-See `CLAUDE.md` for detailed phase status and operational commands.
+- **Embeddings:** Mistral `mistral-embed-2312` (1024-dim, batched). **Generation:**
+  Llama-4-Maverick (Meta Llama API). **Vectors:** Pinecone serverless, cosine,
+  vector ID `{slug}#{section_type}`.
+- **GCP only**, **zero cost** (everything inside free tiers), **production-level**
+  (least-privilege service accounts, idempotent scrape, monthly refresh crons).

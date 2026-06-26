@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "know-my-professor"
+version = "0.1.0"
+description = "RAG chatbot over Northeastern Khoury faculty profiles"
+requires-python = ">=3.11"
+
+# One package, five deployables. Each Cloud Run unit installs ONLY its extra so
+# its image stays lean (the scraper image never pulls fastapi/llama, etc.).
+# The deploy/Dockerfile selects the extra via `pip install ".[${COMPONENT}]"`.
+[project.optional-dependencies]
+profiles = [
+    "requests==2.32.3",
+    "beautifulsoup4==4.12.3",
+    "google-cloud-storage==2.18.2",
+]
+weblinks = [
+    "requests==2.32.3",
+    "beautifulsoup4==4.12.3",
+    "trafilatura",
+    "google-generativeai",
+    "google-cloud-storage==2.18.2",
+]
+ingest = [
+    "google-cloud-storage==2.18.2",
+    "mistralai==1.9.10",
+    "pinecone==5.4.2",
+]
+api = [
+    "fastapi==0.115.5",
+    "uvicorn[standard]==0.32.1",
+    "llama-api-client==0.6.0",
+    "mistralai==1.9.10",
+    "pinecone==5.4.2",
+    "pydantic==2.10.3",
+]
+frontend = [
+    "streamlit",
+    "requests==2.32.3",
+]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+include = ["core*", "preprocessing*", "shared*", "serving*"]
+
+[tool.pytest.ini_options]
+# Put the repo root on sys.path so tests `import core`, `import shared`, etc.
+# (replaces the old conftest flat-import shim).
+pythonpath = ["."]
+testpaths = ["tests"]

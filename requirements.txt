@@ -1,21 +1,7 @@
-# Aggregate dev requirements for the whole project (local development convenience).
-# Each component also has its own pinned requirements.txt used by its Dockerfile:
-#   scraper/  ingest/  api/  frontend/
-# For deployment, the per-component files are the source of truth.
-
-# scraper
-requests==2.32.3
-beautifulsoup4==4.12.3
-google-cloud-storage==2.18.2
-
-# ingest
-google-generativeai==0.8.3
-pinecone==5.4.2
-
-# api
-fastapi==0.115.5
-uvicorn[standard]==0.32.1
-pydantic==2.10.3
-
-# frontend
-streamlit
+# Local development convenience: install the package with every component extra.
+#   pip install -r requirements.txt
+#
+# Dependencies are declared in pyproject.toml under [project.optional-dependencies],
+# one extra per Cloud Run deployable. Deployment installs only the relevant extra
+# (see deploy/Dockerfile: pip install ".[${COMPONENT}]").
+-e .[profiles,weblinks,ingest,api,frontend,dev]

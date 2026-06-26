@@ -1,3 +1,0 @@
-google-cloud-storage==2.18.2
-mistralai==1.9.10
-pinecone==5.4.2
