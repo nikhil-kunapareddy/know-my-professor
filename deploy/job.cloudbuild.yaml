@@ -1,0 +1,42 @@
+# Manual build + deploy for the three Cloud Run JOBS (not covered by CI).
+# Single deploy/Dockerfile selected via --build-arg COMPONENT; Cloud Build runs
+# on amd64 so this works from an arm64 Mac with no local Docker.
+#
+#   gcloud builds submit --config deploy/job.cloudbuild.yaml \
+#     --substitutions=_COMPONENT=ingest,_JOB=ingest-pinecone \
+#     --project=know-my-professor
+#
+# Env vars: set once on the job with `gcloud run jobs deploy --set-env-vars`;
+# the --image deploy below preserves them (and the runtime SA) on later builds.
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --build-arg
+      - COMPONENT=${_COMPONENT}
+      - -f
+      - deploy/Dockerfile
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_JOB}:$BUILD_ID
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_JOB}:latest
+      - .
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - --all-tags
+      - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_JOB}
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - jobs
+      - deploy
+      - ${_JOB}
+      - --image=us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_JOB}:$BUILD_ID
+      - --region=us-central1
+      - --project=$PROJECT_ID
+
+options:
+  logging: CLOUD_LOGGING_ONLY

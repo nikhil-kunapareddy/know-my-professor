@@ -1,0 +1,12 @@
+# Build context is the repo root now, so keep the upload small and clean.
+.git
+.venv
+**/__pycache__
+**/*.pyc
+data
+tests
+deploy
+*.md
+.env
+**/.env
+.pytest_cache

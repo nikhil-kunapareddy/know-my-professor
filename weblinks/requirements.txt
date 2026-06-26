@@ -1,5 +1,0 @@
-requests
-beautifulsoup4
-trafilatura
-google-generativeai
-google-cloud-storage
