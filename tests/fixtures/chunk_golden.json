@@ -1,0 +1,379 @@
+{
+  "profiles": [
+    {
+      "chunks": [
+        {
+          "metadata": {
+            "areas_of_interest": [
+              "Programming Languages",
+              "Type Systems"
+            ],
+            "campuses": [
+              "Boston"
+            ],
+            "content_hash": "sha256:a438d7c1c5bee4f2febaeeb46862e74a",
+            "professor_name": "Jane Doe",
+            "professor_slug": "jane-doe",
+            "professor_title": "Associate Professor",
+            "roles": [
+              "Tenured/Tenure-Track Faculty"
+            ],
+            "section_type": "biography",
+            "text": "Jane Doe (Associate Professor)\nBiography:\nJane Doe studies type systems and compilers.",
+            "url": "https://www.khoury.northeastern.edu/people/jane-doe/"
+          },
+          "text": "Jane Doe (Associate Professor)\nBiography:\nJane Doe studies type systems and compilers.",
+          "vector_id": "jane-doe#biography"
+        },
+        {
+          "metadata": {
+            "areas_of_interest": [
+              "Programming Languages",
+              "Type Systems"
+            ],
+            "campuses": [
+              "Boston"
+            ],
+            "content_hash": "sha256:1847f817b3fb7e51a2ac1383f297abeb",
+            "professor_name": "Jane Doe",
+            "professor_slug": "jane-doe",
+            "professor_title": "Associate Professor",
+            "roles": [
+              "Tenured/Tenure-Track Faculty"
+            ],
+            "section_type": "research_interests",
+            "text": "Jane Doe (Associate Professor)\nResearch interests:\n- Programming languages\n- Compilers",
+            "url": "https://www.khoury.northeastern.edu/people/jane-doe/"
+          },
+          "text": "Jane Doe (Associate Professor)\nResearch interests:\n- Programming languages\n- Compilers",
+          "vector_id": "jane-doe#research_interests"
+        },
+        {
+          "metadata": {
+            "areas_of_interest": [
+              "Programming Languages",
+              "Type Systems"
+            ],
+            "campuses": [
+              "Boston"
+            ],
+            "content_hash": "sha256:d247742347e83266800b6de0b586f517",
+            "professor_name": "Jane Doe",
+            "professor_slug": "jane-doe",
+            "professor_title": "Associate Professor",
+            "roles": [
+              "Tenured/Tenure-Track Faculty"
+            ],
+            "section_type": "education",
+            "text": "Jane Doe (Associate Professor)\nEducation:\n- PhD in Computer Science, MIT",
+            "url": "https://www.khoury.northeastern.edu/people/jane-doe/"
+          },
+          "text": "Jane Doe (Associate Professor)\nEducation:\n- PhD in Computer Science, MIT",
+          "vector_id": "jane-doe#education"
+        },
+        {
+          "metadata": {
+            "areas_of_interest": [
+              "Programming Languages",
+              "Type Systems"
+            ],
+            "campuses": [
+              "Boston"
+            ],
+            "content_hash": "sha256:be5e5d49897ee43e5815e99121c728f8",
+            "professor_name": "Jane Doe",
+            "professor_slug": "jane-doe",
+            "professor_title": "Associate Professor",
+            "roles": [
+              "Tenured/Tenure-Track Faculty"
+            ],
+            "section_type": "areas_of_interest",
+            "text": "Jane Doe (Associate Professor)\nAreas of interest:\n- Programming Languages\n- Type Systems",
+            "url": "https://www.khoury.northeastern.edu/people/jane-doe/"
+          },
+          "text": "Jane Doe (Associate Professor)\nAreas of interest:\n- Programming Languages\n- Type Systems",
+          "vector_id": "jane-doe#areas_of_interest"
+        },
+        {
+          "metadata": {
+            "areas_of_interest": [
+              "Programming Languages",
+              "Type Systems"
+            ],
+            "campuses": [
+              "Boston"
+            ],
+            "content_hash": "sha256:02f12e9dc1d21c1f13a2839989bd2535",
+            "professor_name": "Jane Doe",
+            "professor_slug": "jane-doe",
+            "professor_title": "Associate Professor",
+            "roles": [
+              "Tenured/Tenure-Track Faculty"
+            ],
+            "section_type": "labs_and_groups",
+            "text": "Jane Doe (Associate Professor)\nLabs and groups:\n- Programming Research Lab",
+            "url": "https://www.khoury.northeastern.edu/people/jane-doe/"
+          },
+          "text": "Jane Doe (Associate Professor)\nLabs and groups:\n- Programming Research Lab",
+          "vector_id": "jane-doe#labs_and_groups"
+        },
+        {
+          "metadata": {
+            "areas_of_interest": [
+              "Programming Languages",
+              "Type Systems"
+            ],
+            "campuses": [
+              "Boston"
+            ],
+            "content_hash": "sha256:a7a14e513281b0a73411c23adb7bc665",
+            "professor_name": "Jane Doe",
+            "professor_slug": "jane-doe",
+            "professor_title": "Associate Professor",
+            "roles": [
+              "Tenured/Tenure-Track Faculty"
+            ],
+            "section_type": "projects",
+            "text": "Jane Doe (Associate Professor)\nProjects:\n- Typed IR for gradual typing",
+            "url": "https://www.khoury.northeastern.edu/people/jane-doe/"
+          },
+          "text": "Jane Doe (Associate Professor)\nProjects:\n- Typed IR for gradual typing",
+          "vector_id": "jane-doe#projects"
+        }
+      ],
+      "is_substantive": true,
+      "slug": "jane-doe"
+    },
+    {
+      "chunks": [
+        {
+          "metadata": {
+            "areas_of_interest": [],
+            "campuses": [
+              "Vancouver",
+              "Boston"
+            ],
+            "content_hash": "sha256:897416835cca0fff78ea293ad611aae4",
+            "professor_name": "Ravi Krishnan",
+            "professor_slug": "ravi-krishnan",
+            "professor_title": "",
+            "roles": [],
+            "section_type": "biography",
+            "text": "Ravi Krishnan\nBiography:\nWorks on distributed systems.",
+            "url": "https://www.khoury.northeastern.edu/people/ravi-krishnan/"
+          },
+          "text": "Ravi Krishnan\nBiography:\nWorks on distributed systems.",
+          "vector_id": "ravi-krishnan#biography"
+        }
+      ],
+      "is_substantive": true,
+      "slug": "ravi-krishnan"
+    },
+    {
+      "chunks": [
+        {
+          "metadata": {
+            "areas_of_interest": [
+              "Human–Computer Interaction"
+            ],
+            "campuses": [
+              "Oakland"
+            ],
+            "content_hash": "sha256:e898a315c086f5069de5e60e4e8aa271",
+            "professor_name": "Amélie Rousseau",
+            "professor_slug": "amelie-rousseau",
+            "professor_title": "Assistant Teaching Professor",
+            "roles": [
+              "Teaching Faculty"
+            ],
+            "section_type": "biography",
+            "text": "Amélie Rousseau (Assistant Teaching Professor)\nBiography:\nAmélie Rousseau — research on accessibility and café-based fieldwork.",
+            "url": "https://www.khoury.northeastern.edu/people/amelie-rousseau/"
+          },
+          "text": "Amélie Rousseau (Assistant Teaching Professor)\nBiography:\nAmélie Rousseau — research on accessibility and café-based fieldwork.",
+          "vector_id": "amelie-rousseau#biography"
+        },
+        {
+          "metadata": {
+            "areas_of_interest": [
+              "Human–Computer Interaction"
+            ],
+            "campuses": [
+              "Oakland"
+            ],
+            "content_hash": "sha256:ecdef92b531a2474bc1249e02c033ab3",
+            "professor_name": "Amélie Rousseau",
+            "professor_slug": "amelie-rousseau",
+            "professor_title": "Assistant Teaching Professor",
+            "roles": [
+              "Teaching Faculty"
+            ],
+            "section_type": "research_interests",
+            "text": "Amélie Rousseau (Assistant Teaching Professor)\nResearch interests:\n- Accessibility",
+            "url": "https://www.khoury.northeastern.edu/people/amelie-rousseau/"
+          },
+          "text": "Amélie Rousseau (Assistant Teaching Professor)\nResearch interests:\n- Accessibility",
+          "vector_id": "amelie-rousseau#research_interests"
+        },
+        {
+          "metadata": {
+            "areas_of_interest": [
+              "Human–Computer Interaction"
+            ],
+            "campuses": [
+              "Oakland"
+            ],
+            "content_hash": "sha256:dce4bed9b7ddd2681818ee91073d0245",
+            "professor_name": "Amélie Rousseau",
+            "professor_slug": "amelie-rousseau",
+            "professor_title": "Assistant Teaching Professor",
+            "roles": [
+              "Teaching Faculty"
+            ],
+            "section_type": "areas_of_interest",
+            "text": "Amélie Rousseau (Assistant Teaching Professor)\nAreas of interest:\n- Human–Computer Interaction",
+            "url": "https://www.khoury.northeastern.edu/people/amelie-rousseau/"
+          },
+          "text": "Amélie Rousseau (Assistant Teaching Professor)\nAreas of interest:\n- Human–Computer Interaction",
+          "vector_id": "amelie-rousseau#areas_of_interest"
+        }
+      ],
+      "is_substantive": true,
+      "slug": "amelie-rousseau"
+    },
+    {
+      "chunks": [
+        {
+          "metadata": {
+            "areas_of_interest": [],
+            "campuses": [],
+            "content_hash": "sha256:b1dda777e43d2b113aeb5c6e3a4e851b",
+            "professor_name": "No Content",
+            "professor_slug": "no-content-person",
+            "professor_title": "Staff",
+            "roles": [],
+            "section_type": "education",
+            "text": "No Content (Staff)\nEducation:\n- BS in Something",
+            "url": "https://www.khoury.northeastern.edu/people/no-content-person/"
+          },
+          "text": "No Content (Staff)\nEducation:\n- BS in Something",
+          "vector_id": "no-content-person#education"
+        }
+      ],
+      "is_substantive": false,
+      "slug": "no-content-person"
+    },
+    {
+      "chunks": [],
+      "is_substantive": true,
+      "slug": null
+    }
+  ],
+  "weblinks": [
+    {
+      "chunks": [
+        {
+          "metadata": {
+            "content_hash": "sha256:36a43761ed38ed516d306be00a5766b2",
+            "professor_name": "Jane Doe",
+            "professor_slug": "jane-doe",
+            "professor_title": "Associate Professor",
+            "section_type": "website_summary",
+            "text": "Jane Doe (Associate Professor)\nWebsite summary:\nJane's group builds type systems for gradual typing.",
+            "url": "https://jane.example/"
+          },
+          "text": "Jane Doe (Associate Professor)\nWebsite summary:\nJane's group builds type systems for gradual typing.",
+          "vector_id": "jane-doe#website_summary"
+        },
+        {
+          "metadata": {
+            "content_hash": "sha256:f6328dae8272442b085ec5506eaef4c2",
+            "professor_name": "Jane Doe",
+            "professor_slug": "jane-doe",
+            "professor_title": "Associate Professor",
+            "section_type": "current_projects",
+            "text": "Jane Doe (Associate Professor)\nCurrent projects:\n- Typed IR\n- Gradual contracts",
+            "url": "https://jane.example/research/"
+          },
+          "text": "Jane Doe (Associate Professor)\nCurrent projects:\n- Typed IR\n- Gradual contracts",
+          "vector_id": "jane-doe#current_projects"
+        },
+        {
+          "metadata": {
+            "content_hash": "sha256:a581196e76fdbbdc90a7b61fe4f1b5e2",
+            "professor_name": "Jane Doe",
+            "professor_slug": "jane-doe",
+            "professor_title": "Associate Professor",
+            "section_type": "recent_publications",
+            "text": "Jane Doe (Associate Professor)\nRecent publications:\n- Gradual Types Revisited (2025)\n- Contracts at Scale (2024)",
+            "url": "https://jane.example/pubs/"
+          },
+          "text": "Jane Doe (Associate Professor)\nRecent publications:\n- Gradual Types Revisited (2025)\n- Contracts at Scale (2024)",
+          "vector_id": "jane-doe#recent_publications"
+        },
+        {
+          "metadata": {
+            "content_hash": "sha256:a09947d02834cb17aa6c53ee35951cb2",
+            "professor_name": "Jane Doe",
+            "professor_slug": "jane-doe",
+            "professor_title": "Associate Professor",
+            "section_type": "students_or_lab_members",
+            "text": "Jane Doe (Associate Professor)\nStudents and lab members:\n- Alice Chen\n- Bob Ortiz",
+            "url": "https://jane.example/people/"
+          },
+          "text": "Jane Doe (Associate Professor)\nStudents and lab members:\n- Alice Chen\n- Bob Ortiz",
+          "vector_id": "jane-doe#students_or_lab_members"
+        },
+        {
+          "metadata": {
+            "content_hash": "sha256:daad87d315553ae079fb9715ac022b4e",
+            "professor_name": "Jane Doe",
+            "professor_slug": "jane-doe",
+            "professor_title": "Associate Professor",
+            "section_type": "recent_news",
+            "text": "Jane Doe (Associate Professor)\nRecent news:\n- 2025-04: paper accepted at POPL",
+            "url": "https://jane.example/news/"
+          },
+          "text": "Jane Doe (Associate Professor)\nRecent news:\n- 2025-04: paper accepted at POPL",
+          "vector_id": "jane-doe#recent_news"
+        }
+      ],
+      "slug": "jane-doe"
+    },
+    {
+      "chunks": [
+        {
+          "metadata": {
+            "content_hash": "sha256:8f85270a8b0c103fd2d8bf4e41b91e07",
+            "professor_name": "ravi-krishnan",
+            "professor_slug": "ravi-krishnan",
+            "professor_title": "",
+            "section_type": "website_summary",
+            "text": "ravi-krishnan\nWebsite summary:\nDistributed systems research.",
+            "url": ""
+          },
+          "text": "ravi-krishnan\nWebsite summary:\nDistributed systems research.",
+          "vector_id": "ravi-krishnan#website_summary"
+        },
+        {
+          "metadata": {
+            "content_hash": "sha256:b082b52876d57a33e00a88061ec96229",
+            "professor_name": "ravi-krishnan",
+            "professor_slug": "ravi-krishnan",
+            "professor_title": "",
+            "section_type": "unknown_future_section",
+            "text": "ravi-krishnan\nUnknown Future Section:\n- Should fall back to a title-cased label",
+            "url": "https://ravi.example/"
+          },
+          "text": "ravi-krishnan\nUnknown Future Section:\n- Should fall back to a title-cased label",
+          "vector_id": "ravi-krishnan#unknown_future_section"
+        }
+      ],
+      "slug": "ravi-krishnan"
+    },
+    {
+      "chunks": [],
+      "slug": null
+    }
+  ]
+}

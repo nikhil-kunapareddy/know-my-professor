@@ -29,17 +29,19 @@ from collections import Counter
 
 import google.generativeai as genai
 
-from shared.config import (
-    PROFILE_PREFIX,
-    SCHEMA_VERSION,
-    SECTION_TYPES,
-    WEBLINKS_PREFIX,
-    gcs_bucket,
-)
+from shared.config import gcs_bucket
 from shared.gcs import GCSStore
 
+from ..registry import get_source
+from .config import SCHEMA_VERSION, SECTION_TYPES
 from .crawl import SiteCrawler
 from .extract import Extractor
+from .source import WeblinksSource
+
+#: Read profiles through the registry rather than importing that package, so
+#: weblinks stays decoupled from how profiles are stored.
+PROFILE_PREFIX = get_source("profiles").prefix
+WEBLINKS_PREFIX = WeblinksSource.prefix
 
 
 class WeblinksCrawlJob:
@@ -151,7 +153,7 @@ def main() -> None:
         print("Nothing to crawl.")
         return
 
-    existing_hashes = {} if args.force else store.load_page_hashes(WEBLINKS_PREFIX)
+    existing_hashes = {} if args.force else store.load_hashes(WEBLINKS_PREFIX, "page_hash")
 
     if not args.dry_run:
         gemini_key = os.environ.get("GEMINI_API_KEY")

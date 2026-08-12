@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import List
+from typing import Any
 
 
 @dataclass
@@ -26,6 +27,19 @@ class Retriever(ABC):
     """
 
     @abstractmethod
-    def retrieve(self, query_embedding: List[float], top_k: int) -> List[RetrievalResult]:
-        """Return the top-k most similar chunks for the given query embedding."""
+    def retrieve(
+        self,
+        query_embedding: list[float],
+        top_k: int,
+        filters: Mapping[str, Any] | None = None,
+        namespace: str | None = None,
+    ) -> list[RetrievalResult]:
+        """Return the top-k most similar chunks for the given query embedding.
+
+        ``filters`` narrows the search by chunk metadata (e.g. ``section_type``)
+        and ``namespace`` partitions the index. Both are optional and exist so a
+        corpus holding more than one kind of entity can be queried without one
+        kind drowning out the other — a person query should not compete with
+        course chunks for the same top-k slots.
+        """
         ...

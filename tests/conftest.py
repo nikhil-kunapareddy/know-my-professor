@@ -82,7 +82,7 @@ def _install_stubs() -> None:
 
         genai.GenerativeModel = _GenerativeModel
         sys.modules["google.generativeai"] = genai
-        setattr(google, "generativeai", genai)
+        google.generativeai = genai
 
     if _missing("google.cloud.storage"):
         import google
@@ -93,7 +93,7 @@ def _install_stubs() -> None:
             gcloud = types.ModuleType("google.cloud")
             gcloud.__path__ = []  # namespace-style
             sys.modules["google.cloud"] = gcloud
-            setattr(google, "cloud", gcloud)
+            google.cloud = gcloud
 
         storage = types.ModuleType("google.cloud.storage")
 
@@ -103,7 +103,7 @@ def _install_stubs() -> None:
 
         storage.Client = _Client
         sys.modules["google.cloud.storage"] = storage
-        setattr(gcloud, "storage", storage)
+        gcloud.storage = storage
 
 
 _install_stubs()

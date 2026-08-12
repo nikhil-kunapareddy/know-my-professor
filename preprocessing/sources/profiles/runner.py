@@ -18,15 +18,20 @@ import json
 import time
 from dataclasses import asdict
 
-from shared.config import LOCAL_OUTPUT_DIR, SCRAPER_REQUEST_DELAY_SECONDS, gcs_bucket
+from shared.config import gcs_bucket
 from shared.gcs import GCSStore, LocalStore, OutputStore
 
+from .config import LOCAL_OUTPUT_DIR, SCRAPER_REQUEST_DELAY_SECONDS
 from .fetcher import DirectoryFetcher
 from .profile_parser import ProfileParser
+from .source import ProfileSource
 
 
 class ProfileScraper:
     """Discovers profile URLs and scrapes each into a JSON record in the store."""
+
+    #: Where records land; the source owns the layout, not the scraper.
+    prefix = ProfileSource.prefix
 
     def __init__(self, fetcher: DirectoryFetcher, parser: ProfileParser, store: OutputStore):
         self.fetcher = fetcher
@@ -38,7 +43,7 @@ class ProfileScraper:
         if limit is not None:
             urls = urls[:limit]
 
-        existing = self.store.existing_profile_slugs()
+        existing = self.store.existing_slugs(self.prefix)
         print(f"  ({len(existing)} profiles already present in {self.store.describe()})")
 
         for i, url in enumerate(urls, 1):
@@ -52,7 +57,7 @@ class ProfileScraper:
                 html = self.fetcher.fetch(url)
                 profile = self.parser.parse(url, html)
                 payload = json.dumps(asdict(profile), indent=2, ensure_ascii=False)
-                self.store.write_text(f"profiles/{slug}.json", payload)
+                self.store.write_text(f"{self.prefix}{slug}.json", payload)
                 print(f"  [{i}/{len(urls)}] {profile.name or slug}")
             except Exception as e:
                 print(f"  [{i}/{len(urls)}] FAILED {slug}: {e}")

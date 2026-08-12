@@ -15,7 +15,7 @@ from urllib.robotparser import RobotFileParser
 import requests
 from bs4 import BeautifulSoup
 
-from shared.config import (
+from .config import (
     MAX_PAGES_PER_PROFESSOR,
     ONE_HOP_KEYWORDS,
     WEBLINKS_REQUEST_DELAY_SECONDS,

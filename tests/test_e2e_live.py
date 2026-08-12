@@ -1,4 +1,4 @@
-"""Live end-to-end check of the RAG chain: Mistral embed -> Pinecone -> Llama.
+"""Live end-to-end check of the RAG chain: embed -> Pinecone -> generate.
 
 Unlike the rest of tests/ (fully offline with stubbed cloud deps), this hits the
 REAL APIs and the live Pinecone index, so it is opt-in: skipped unless
@@ -9,9 +9,8 @@ KMP_LIVE_E2E is set. Run it from the venv after an ingest:
 Keys are read from the repo-root .env (MISTRAL_API_KEY, PINECONE_API_KEY,
 LLAMA_API_KEY); env vars of the same name take precedence if already set.
 
-It reuses production code/constants on purpose (the real embedder + shared
-config), so it also fails loudly if anything starts hardcoding a divergent
-embedder/index instead of pulling from shared.config.
+It drives the real ``RAGPipeline`` with real providers, so it exercises the same
+objects the deployed service builds — not a parallel reimplementation.
 """
 
 from __future__ import annotations
@@ -56,55 +55,45 @@ def keys() -> dict[str, str]:
     return {k: os.environ[k] for k in _REQUIRED_KEYS}
 
 
-def test_embedder_and_index_are_single_sourced():
-    """Drift guard: query + document embedders and the index all come from shared.config."""
-    from core.query.embedder import QueryEmbedder
-    from preprocessing.ingest.embedding import DocumentEmbedder
-    from shared.config import EMBED_MODEL, PINECONE_DEFAULT_INDEX
-
-    assert QueryEmbedder(client=None).model == EMBED_MODEL
-    assert DocumentEmbedder().model == EMBED_MODEL
-    assert PINECONE_DEFAULT_INDEX  # the one place the index name lives
-
-
 def test_rag_chain_end_to_end(keys):
-    from llama_api_client import LlamaAPIClient
+    """The deployed pipeline, assembled the same way the API assembles it."""
     from pinecone import Pinecone
 
-    from core.query.embedder import QueryEmbedder
-    from preprocessing.ingest.embedding import DocumentEmbedder
-    from shared.config import DEFAULT_CHAT_MODEL, EMBED_DIM, PINECONE_DEFAULT_INDEX
+    from core.llm import build_generator
+    from core.pipeline import NO_ANSWER, RAGPipeline
+    from core.retrieval.pinecone_retriever import PineconeRetriever
+    from shared.config import EMBED_DIM, PINECONE_DEFAULT_INDEX
+    from shared.embeddings import build_embedder
 
+    embedder = build_embedder()
     question = "Who at Khoury works on programming languages or type systems?"
 
-    # 1) Embed the query with the real production embedder; dim must match the index.
-    qvec = DocumentEmbedder().embed_texts([question])[0]
-    assert len(qvec) == EMBED_DIM == 1024
+    # 1) The query embedding must match the index width.
+    qvec = embedder.embed_query(question)
+    assert len(qvec) == EMBED_DIM
 
-    # 2) Retrieve from the live index.
+    # 2) The index must actually hold vectors.
     index = Pinecone(api_key=os.environ["PINECONE_API_KEY"]).Index(PINECONE_DEFAULT_INDEX)
-    result = index.query(vector=qvec, top_k=5, include_metadata=True)
-    matches = result.matches or []
-    assert matches, "no vectors retrieved — is the index populated?"
+    retriever = PineconeRetriever(index)
+    assert retriever.retrieve(qvec, top_k=5), "no vectors retrieved — is the index populated?"
 
-    context = "\n\n".join(
-        f"[{i}] {(m.metadata or {}).get('professor_name', '')} "
-        f"({(m.metadata or {}).get('professor_title', '')}) — "
-        f"{(m.metadata or {}).get('section_type', '')}\n{(m.metadata or {}).get('text', '')}"
-        for i, m in enumerate(matches, start=1)
-    )
+    # 3) The full pipeline answers and cites.
+    pipeline = RAGPipeline(embedder, retriever, build_generator())
+    result = pipeline.answer(question)
+    print("\nE2E answer:", result.answer)
+    print("E2E timings:", result.timings_ms)
 
-    # 3) Generate with the same Llama model the API uses.
-    client = LlamaAPIClient(api_key=os.environ["LLAMA_API_KEY"])
-    resp = client.chat.completions.create(
-        model=DEFAULT_CHAT_MODEL,
-        messages=[
-            {"role": "system", "content": "Answer ONLY from the numbered context. Cite sources with [n]."},
-            {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {question}\n"},
-        ],
-        temperature=0.0,
-    )
-    answer = (resp.completion_message.content.text or "").strip()
-    print("\nE2E answer:", answer)
-    assert answer, "empty answer from chat model"
-    assert "[" in answer, "answer did not cite any retrieved source"
+    assert result.answer, "empty answer from chat model"
+    assert result.answer != NO_ANSWER, "pipeline found nothing above the score floor"
+    assert "[" in result.answer, "answer did not cite any retrieved source"
+    assert result.sources
+
+
+def test_live_index_dimension_matches_config(keys):
+    """The index the service queries must be the width the embedder produces."""
+    from pinecone import Pinecone
+
+    from shared.config import EMBED_DIM, PINECONE_DEFAULT_INDEX
+
+    pc = Pinecone(api_key=os.environ["PINECONE_API_KEY"])
+    assert pc.describe_index(PINECONE_DEFAULT_INDEX).dimension == EMBED_DIM

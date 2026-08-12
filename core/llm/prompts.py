@@ -1,10 +1,19 @@
-"""System instruction and prompt assembly for the /chat answer step."""
+"""System instruction, prompt assembly, and citation parsing for the answer step.
+
+The prompt tells the model to cite with ``[n]``, so the parser for those markers
+lives here too — the convention and the code that reads it back stay together,
+and the API and the eval harness share one definition instead of each keeping a
+regex that can drift.
+"""
 
 from __future__ import annotations
 
-from typing import List
+import re
 
 from core.retrieval.base import RetrievalResult
+
+#: Matches the bracketed citation markers the system instruction asks for.
+CITATION_MARKER = re.compile(r"\[(\d+)\]")
 
 SYSTEM_INSTRUCTION = """\
 You answer questions about faculty at Northeastern University's Khoury College of Computer Sciences.
@@ -16,6 +25,11 @@ Rules:
 - If the context does not contain the answer, say "I don't have that information in my data."
 - Be concise. Two or three sentences is usually enough.
 """
+
+
+def cited_numbers(answer: str) -> set[int]:
+    """The distinct ``[n]`` markers present in an answer."""
+    return {int(m) for m in CITATION_MARKER.findall(answer)}
 
 
 class PromptBuilder:
@@ -36,7 +50,7 @@ class PromptBuilder:
             f"{md.get('text', '')}"
         )
 
-    def build_user_message(self, question: str, results: List[RetrievalResult]) -> str:
+    def build_user_message(self, question: str, results: list[RetrievalResult]) -> str:
         """Assemble the user turn: numbered context followed by the question."""
         blocks = [self.context_block(i, r) for i, r in enumerate(results, start=1)]
         return "Context:\n" + "\n\n".join(blocks) + f"\n\nQuestion: {question}\n"
