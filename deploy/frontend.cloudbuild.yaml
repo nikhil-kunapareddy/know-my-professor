@@ -7,6 +7,20 @@
 # deploy/**, pyproject.toml.
 
 steps:
+  # 0. Gate: lint + offline tests. A failing step aborts the build, so a red
+  #    commit can never reach Cloud Run. Uses the lean [ci] extra rather than
+  #    every extra, to keep the deploy path quick.
+  - name: python:3.12-slim
+    id: test
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        pip install --no-cache-dir --quiet ".[ci]"
+        ruff check .
+        pytest tests/ -q
+
   # 1. Build the frontend image from deploy/Dockerfile.
   - name: gcr.io/cloud-builders/docker
     args:

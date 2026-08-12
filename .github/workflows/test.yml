@@ -1,0 +1,44 @@
+name: tests
+
+# Gate on every PR into dev and main, and on direct pushes to either. Deploying
+# from main is automatic, so an unguarded merge ships whatever is on the branch.
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main, dev]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # Matches deploy/Dockerfile (python:3.12-slim).
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      # Every extra, not just the ci set: installing all five deployables
+      # together is what surfaces cross-component dependency conflicts (a
+      # starlette range that fastapi and streamlit can't both satisfy, say)
+      # before they reach a developer's machine.
+      - name: Install all extras
+        run: pip install -r requirements.txt
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Test
+        run: pytest tests/ -q
+
+      # Cheap guard on the thing CI can't otherwise see: that each image's
+      # dependency set actually resolves on its own.
+      - name: Check each deployable's dependencies resolve
+        run: |
+          for component in profiles weblinks ingest api frontend; do
+            echo "--- $component"
+            pip install --dry-run --quiet ".[$component]" || exit 1
+          done
