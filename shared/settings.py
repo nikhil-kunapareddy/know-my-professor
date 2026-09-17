@@ -16,7 +16,6 @@ import os
 from dataclasses import dataclass
 
 from shared.config import (
-    DEFAULT_CHAT_MODEL,
     DEFAULT_CHAT_PROVIDER,
     DEFAULT_EMBED_PROVIDER,
     DEFAULT_TOP_K,
@@ -65,7 +64,8 @@ class ApiSettings:
 
     embed_provider: str = DEFAULT_EMBED_PROVIDER
     chat_provider: str = DEFAULT_CHAT_PROVIDER
-    chat_model: str = DEFAULT_CHAT_MODEL
+    #: None means "let the chosen provider pick its own default_model".
+    chat_model: str | None = None
     index_name: str = PINECONE_DEFAULT_INDEX
     top_k: int = DEFAULT_TOP_K
     min_score: float = MIN_RETRIEVAL_SCORE
@@ -76,7 +76,7 @@ class ApiSettings:
         return cls(
             embed_provider=os.environ.get("EMBED_PROVIDER") or DEFAULT_EMBED_PROVIDER,
             chat_provider=os.environ.get("CHAT_PROVIDER") or DEFAULT_CHAT_PROVIDER,
-            chat_model=os.environ.get("LLAMA_CHAT_MODEL") or DEFAULT_CHAT_MODEL,
+            chat_model=os.environ.get("CHAT_MODEL") or None,
             index_name=os.environ.get("PINECONE_INDEX_NAME") or PINECONE_DEFAULT_INDEX,
             top_k=_int_env("TOP_K", DEFAULT_TOP_K),
             min_score=_float_env("MIN_RETRIEVAL_SCORE", MIN_RETRIEVAL_SCORE),

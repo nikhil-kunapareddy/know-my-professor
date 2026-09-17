@@ -16,6 +16,7 @@ from .base import Generator
 #: provider name -> "module:ClassName". Resolved lazily so importing this
 #: package never drags in an SDK the running component didn't install.
 _GENERATORS: dict[str, str] = {
+    "anthropic": "core.llm.anthropic:AnthropicGenerator",
     "llama": "core.llm.llama:LlamaGenerator",
 }
 

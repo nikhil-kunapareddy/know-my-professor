@@ -43,8 +43,12 @@ FETCH_BATCH_SIZE = 100
 
 # --- Generation / retrieval (core) -----------------------------------------
 
-DEFAULT_CHAT_PROVIDER = "llama"
-DEFAULT_CHAT_MODEL = "Llama-4-Maverick-17B-128E-Instruct-FP8"
+# Which Generator the /chat service builds when CHAT_PROVIDER is unset. The
+# model itself is NOT here: an id like "claude-opus-5" means nothing to the
+# Llama provider, so each Generator carries its own ``default_model`` and this
+# file only names the provider. Override the model per deployment with
+# CHAT_MODEL, which is only meaningful together with CHAT_PROVIDER.
+DEFAULT_CHAT_PROVIDER = "anthropic"
 DEFAULT_TOP_K = 8
 
 # Cosine similarity below this is treated as "not really about the question".

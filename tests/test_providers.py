@@ -5,7 +5,9 @@ from __future__ import annotations
 import pytest
 
 from core.llm import available_generators, build_generator
-from shared.config import DEFAULT_CHAT_MODEL, EMBED_DIM, EMBED_MODEL
+from core.llm.anthropic import AnthropicGenerator
+from core.llm.llama import LlamaGenerator
+from shared.config import EMBED_DIM, EMBED_MODEL
 from shared.embeddings import available_embedders, build_embedder
 from shared.embeddings.mistral import MistralEmbedder
 from shared.retry import with_backoff
@@ -34,10 +36,23 @@ def test_build_embedder_rejects_a_dim_that_the_index_cannot_hold():
 # --- generation registry ---------------------------------------------------
 
 
-def test_build_generator_uses_the_configured_model():
+def test_build_generator_defaults_to_anthropic():
     generator = build_generator(client=object())
-    assert generator.model == DEFAULT_CHAT_MODEL
-    assert "llama" in available_generators()
+    assert isinstance(generator, AnthropicGenerator)
+    assert generator.model == AnthropicGenerator.default_model
+    assert {"anthropic", "llama"} <= set(available_generators())
+
+
+def test_each_provider_supplies_its_own_default_model():
+    """A model id is provider-specific, so it cannot live in shared.config."""
+    assert build_generator("llama", client=object()).model == LlamaGenerator.default_model
+    assert build_generator("anthropic", client=object()).model != LlamaGenerator.default_model
+
+
+def test_an_explicit_model_overrides_the_provider_default():
+    assert build_generator("anthropic", client=object(), model="claude-sonnet-5").model == (
+        "claude-sonnet-5"
+    )
 
 
 def test_build_generator_rejects_unknown_provider():
@@ -48,7 +63,62 @@ def test_build_generator_rejects_unknown_provider():
 def test_providers_declare_their_credential_env_var():
     """Lets the API fail at boot on a missing key instead of on first request."""
     assert build_embedder().api_key_env == "MISTRAL_API_KEY"
-    assert build_generator(client=object()).api_key_env == "LLAMA_API_KEY"
+    assert build_generator(client=object()).api_key_env == "ANTHROPIC_API_KEY"
+    assert build_generator("llama", client=object()).api_key_env == "LLAMA_API_KEY"
+
+
+# --- the Anthropic generator -----------------------------------------------
+
+
+class _FakeBlock:
+    def __init__(self, type_, text=""):
+        self.type = type_
+        self.text = text
+
+
+class _FakeMessages:
+    def __init__(self, blocks, stop_reason="end_turn"):
+        self._blocks, self._stop_reason = blocks, stop_reason
+        self.kwargs: dict | None = None
+
+    def create(self, **kwargs):
+        self.kwargs = kwargs
+        return type("R", (), {"content": self._blocks, "stop_reason": self._stop_reason})()
+
+
+class _FakeAnthropic:
+    def __init__(self, blocks, stop_reason="end_turn"):
+        self.messages = _FakeMessages(blocks, stop_reason)
+
+
+def test_anthropic_generate_joins_text_and_drops_thinking_blocks():
+    """Thinking is on by default on this model, so content is not all answer."""
+    client = _FakeAnthropic([
+        _FakeBlock("thinking", "the user wants PL people"),
+        _FakeBlock("text", "Jan Vitek works on PL [1]."),
+        _FakeBlock("text", " Also Amal Ahmed [2]."),
+    ])
+
+    answer = AnthropicGenerator(client=client).generate("sys", "who does PL?")
+    assert answer == "Jan Vitek works on PL [1]. Also Amal Ahmed [2]."
+
+
+def test_anthropic_generate_treats_a_refusal_as_no_answer():
+    """A refusal is a 200 with stop_reason, not an exception; "" hits NO_ANSWER."""
+    client = _FakeAnthropic([], stop_reason="refusal")
+    assert AnthropicGenerator(client=client).generate("sys", "q") == ""
+
+
+def test_anthropic_generate_never_sends_sampling_params():
+    """temperature/top_p are removed on the Claude 5 family and return a 400."""
+    client = _FakeAnthropic([_FakeBlock("text", "hi")])
+    AnthropicGenerator(client=client).generate("sys", "q")
+
+    sent = client.messages.kwargs
+    assert "temperature" not in sent and "top_p" not in sent and "top_k" not in sent
+    assert sent["system"] == "sys"
+    assert sent["messages"] == [{"role": "user", "content": "q"}]
+    assert sent["output_config"] == {"effort": "low"}
 
 
 # --- backoff ---------------------------------------------------------------

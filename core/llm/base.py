@@ -12,8 +12,11 @@ from abc import ABC, abstractmethod
 class Generator(ABC):
     """Produces an answer from a system instruction plus a user message."""
 
-    #: Provider-facing model identifier.
+    #: Provider-facing model identifier, resolved in ``__init__``.
     model: str
+    #: Model used when the caller names none. Lives on the provider rather than
+    #: in shared.config because a model id is meaningless across providers.
+    default_model: str
     #: Env var holding this provider's credential, so a component can fail at
     #: startup on a missing key instead of on the first request.
     api_key_env: str | None = None

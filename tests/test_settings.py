@@ -36,13 +36,15 @@ def test_require_env_rejects_missing_and_empty(monkeypatch):
 
 def test_api_settings_fall_back_to_config_defaults(monkeypatch):
     monkeypatch.setenv("PINECONE_API_KEY", "pk")
-    for name in ("EMBED_PROVIDER", "CHAT_PROVIDER", "LLAMA_CHAT_MODEL",
+    for name in ("EMBED_PROVIDER", "CHAT_PROVIDER", "CHAT_MODEL",
                  "PINECONE_INDEX_NAME", "TOP_K", "MIN_RETRIEVAL_SCORE"):
         monkeypatch.delenv(name, raising=False)
 
     settings = ApiSettings.from_env()
     assert settings.embed_provider == "mistral"
-    assert settings.chat_provider == "llama"
+    assert settings.chat_provider == "anthropic"
+    # None, not a model id: the provider supplies its own default.
+    assert settings.chat_model is None
     assert settings.index_name == PINECONE_DEFAULT_INDEX
     assert settings.top_k == DEFAULT_TOP_K
 

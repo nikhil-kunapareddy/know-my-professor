@@ -15,7 +15,7 @@ crawl faculty sites + Gemini extract ──► .../weblinks/{slug}.json
 ingest: chunk + Mistral embed (1024d) ──► Pinecone (know-my-professor-m1024)
 
 User ─► Streamlit ─► /chat API:  Mistral query embed ─► Pinecone top-K
-                                 ─► Llama-4-Maverick ─► answer + citations
+                                 ─► Claude Opus 5 ─► answer + citations
 ```
 
 Three Cloud Run **Jobs** (scrape, weblinks, ingest) run on monthly crons; two
@@ -71,13 +71,14 @@ and again in Cloud Build before either Service image is built, so a red commit
 cannot deploy.
 
 Secrets live in repo-root `.env` (gitignored): `MISTRAL_API_KEY`,
-`PINECONE_API_KEY`, `LLAMA_API_KEY`, `GEMINI_API_KEY`. In Cloud Run these are env
+`PINECONE_API_KEY`, `ANTHROPIC_API_KEY`, `LLAMA_API_KEY`, `GEMINI_API_KEY`. In Cloud Run these are env
 vars on the service/job, never committed.
 
 ## Stack & constraints
 
 - **Embeddings:** Mistral `mistral-embed-2312` (1024-dim, batched). **Generation:**
-  Llama-4-Maverick (Meta Llama API). **Vectors:** Pinecone serverless, cosine,
-  vector ID `{slug}#{section_type}`.
+  Claude Opus 5 (Anthropic); Llama-4-Maverick stays registered as a fallback,
+  selectable with `CHAT_PROVIDER=llama`. **Vectors:** Pinecone serverless,
+  cosine, vector ID `{slug}#{section_type}`.
 - **GCP only**, **zero cost** (everything inside free tiers), **production-level**
   (least-privilege service accounts, idempotent scrape, monthly refresh crons).

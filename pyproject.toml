@@ -19,6 +19,7 @@ requires-python = ">=3.11"
 
 # --- provider SDK groups ---------------------------------------------------
 embed-mistral = ["mistralai==1.9.10"]
+chat-anthropic = ["anthropic==1.6.0"]
 chat-llama = ["llama-api-client==0.6.0"]
 extract-gemini = ["google-generativeai==0.8.3"]
 
@@ -48,7 +49,9 @@ api = [
     "uvicorn[standard]==0.32.1",
     "pinecone==5.4.2",
     "pydantic==2.10.3",
-    "know-my-professor[embed-mistral,chat-llama]",
+    # Both chat SDKs ship in the api image so CHAT_PROVIDER can be flipped
+    # with an env var instead of a rebuild.
+    "know-my-professor[embed-mistral,chat-anthropic,chat-llama]",
 ]
 frontend = [
     "streamlit==1.58.0",

@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import os
 
-from shared.config import DEFAULT_CHAT_MODEL
-
 from .base import Generator
 
 
@@ -18,10 +16,11 @@ class LlamaGenerator(Generator):
     detail to this class is the whole point of the ``Generator`` interface.
     """
 
+    default_model = "Llama-4-Maverick-17B-128E-Instruct-FP8"
     api_key_env = "LLAMA_API_KEY"
 
-    def __init__(self, client=None, model: str = DEFAULT_CHAT_MODEL, temperature: float = 0.0):
-        self.model = model
+    def __init__(self, client=None, model: str | None = None, temperature: float = 0.0):
+        self.model = model or self.default_model
         self.temperature = temperature
         self._client = client
 
