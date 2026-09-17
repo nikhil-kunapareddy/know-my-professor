@@ -23,6 +23,11 @@ bare environment (`pinecone`, `mistralai`, `trafilatura`, `google.generativeai`,
 `google.cloud.storage`). Where the real libraries are present they are used.
 Tests never call a live API — providers are injected as fakes.
 
+`ragas` is deliberately NOT stubbed. It is an opt-in extra (`pip install -e
+".[eval]"`) that CI does not install, and a stub of a judging library would
+assert nothing; the tests that need it call `pytest.importorskip("ragas")` and
+skip instead.
+
 ## Coverage
 
 - `test_scraper.py` — `ProfileParser.parse` (header/aside/accordion),
@@ -49,8 +54,15 @@ Tests never call a live API — providers are injected as fakes.
 - `test_weblinks.py` — `SiteCrawler` one-hop selection + fetch encoding,
   `Extractor` guard/`page_hash`/`clean_pages`, and that the Gemini extraction
   schema matches the source's declared section keys.
-- `test_eval.py` — evaluation scoring (recall@k, MRR, citation precision) and
-  golden-file parsing.
+- `test_eval.py` — evaluation scoring (recall@k, MRR, citation precision),
+  golden-file parsing and its invariants (every case names slugs or expects a
+  refusal; every registered section type has a case), no-answer scoring
+  including refusals that add a caveat, and reproducible `--sample` selection.
+- `test_ragas_eval.py` — the Ragas framework's pure half (sample building,
+  the stage/metric table, the scoring loop's skip-vs-error rules, report
+  aggregation and gates) always; plus, only when the `eval` extra is installed,
+  two drift guards — that every metric still takes the inputs the table claims,
+  and that the judge is still built the way the Anthropic API requires.
 - `test_e2e_live.py` — opt-in (`KMP_LIVE_E2E=1`); drives the real pipeline
   against the live index.
 

@@ -11,6 +11,7 @@ from evaluation.harness import (
     EvalCase,
     EvalReport,
     load_cases,
+    sample_cases,
     section_of,
     slug_of,
 )
@@ -169,7 +170,101 @@ def test_report_lists_misses_with_what_was_expected():
 def test_the_shipped_golden_file_parses():
     cases = load_cases(GOLDEN)
     assert cases
-    assert all(c.expected_slugs for c in cases)
+    # Every case says what "right" looks like: named slugs, or an expected refusal.
+    assert all(c.expected_slugs or c.expect_no_answer for c in cases)
+    assert not any(c.expected_slugs and c.expect_no_answer for c in cases)
+
+
+def test_the_shipped_golden_file_covers_every_section_type():
+    """A section with no case is a section whose regressions are invisible."""
+    from preprocessing.sources.registry import SOURCES
+
+    registered = {spec.key for source in SOURCES for spec in source.sections}
+    named = {s for c in load_cases(GOLDEN) for s in c.expected_sections}
+    assert not registered - named, f"section types with no golden case: {sorted(registered - named)}"
+
+
+def test_the_shipped_golden_file_has_no_answer_cases():
+    """Without them, raising the relevance floor can only ever look free."""
+    cases = load_cases(GOLDEN)
+    negatives = [c for c in cases if c.expect_no_answer]
+    assert len(negatives) >= 5, "too few no-answer cases to measure the score floor"
+    assert all(not c.reference for c in negatives), "a refusal case needs no reference answer"
+
+
+def test_a_no_answer_case_needs_no_slugs(tmp_path):
+    path = tmp_path / "neg.jsonl"
+    path.write_text('{"id": "n1", "question": "who studies alchemy?", "expect_no_answer": true}\n')
+    case = load_cases(path)[0]
+    assert case.expect_no_answer
+    assert case.expected_slugs == ()
+
+
+def test_a_case_that_says_nothing_about_correctness_is_rejected(tmp_path):
+    path = tmp_path / "vague.jsonl"
+    path.write_text('{"id": "v1", "question": "q?"}\n')
+    with pytest.raises(ValueError, match="expected_slugs or set expect_no_answer"):
+        load_cases(path)
+
+
+def test_a_no_answer_case_cannot_also_expect_slugs(tmp_path):
+    path = tmp_path / "both.jsonl"
+    path.write_text(
+        '{"id": "b1", "question": "q?", "expected_slugs": ["x"], "expect_no_answer": true}\n'
+    )
+    with pytest.raises(ValueError, match="cannot also expect slugs"):
+        load_cases(path)
+
+
+# --- scoring a no-answer case ---------------------------------------------
+
+
+def _negative_case() -> EvalCase:
+    return EvalCase(id="n1", question="who studies alchemy?", expect_no_answer=True)
+
+
+def test_declining_a_no_answer_case_is_a_hit():
+    assert CaseOutcome(case=_negative_case(), retrieved_ids=[]).hit
+
+
+def test_answering_a_no_answer_case_is_a_miss():
+    outcome = CaseOutcome(case=_negative_case(), retrieved_ids=["ann#biography"], answer="Ann! [1]")
+    assert not outcome.hit
+
+
+def test_the_no_answer_string_counts_as_declining():
+    from core.pipeline import NO_ANSWER
+
+    outcome = CaseOutcome(
+        case=_negative_case(), retrieved_ids=["ann#biography"], answer=NO_ANSWER
+    )
+    assert outcome.hit
+
+
+def test_recall_and_mrr_ignore_no_answer_cases():
+    """Mixing them in would let a system that retrieves nothing score well."""
+    outcomes = [
+        CaseOutcome(case=_case(expected=("ann",)), retrieved_ids=["ann#biography"]),
+        CaseOutcome(case=_negative_case(), retrieved_ids=[]),
+    ]
+    report = EvalReport(outcomes=outcomes, top_k=8, min_score=0.35)
+
+    assert report.recall_at_k == 1.0          # one positive case, retrieved
+    assert report.mrr == pytest.approx(1.0)   # not halved by the refusal
+    assert report.no_answer_accuracy == 1.0
+    assert report.total == 2
+
+
+def test_no_answer_accuracy_is_none_without_negative_cases():
+    report = EvalReport(outcomes=[CaseOutcome(case=_case())], top_k=8)
+    assert report.no_answer_accuracy is None
+
+
+def test_the_report_lists_a_case_that_should_have_declined():
+    outcomes = [CaseOutcome(case=_negative_case(), retrieved_ids=["ann#biography"])]
+    text = EvalReport(outcomes=outcomes, top_k=8, min_score=0.0).format()
+    assert "Should have declined (1)" in text
+    assert "retrieved: ann" in text
 
 
 def test_golden_ids_are_unique(tmp_path):
@@ -197,3 +292,98 @@ def test_golden_skips_comments_and_blank_lines(tmp_path):
         '{"id": "a", "question": "q", "expected_slugs": ["x"]}\n'
     )
     assert len(load_cases(path)) == 1
+
+
+def test_a_refusal_with_a_caveat_still_counts_as_declining():
+    """The model opens with the refusal, then names the nearest material it saw."""
+    outcome = CaseOutcome(
+        case=_negative_case(),
+        retrieved_ids=["gyori#biography"],
+        answer=(
+            "I don't have that information in my data. None of the listed faculty work on "
+            "organic chemistry; the closest is Benjamin Gyori, who works on computational "
+            "systems biology [1]."
+        ),
+    )
+    assert outcome.hit
+
+
+def test_a_reworded_refusal_counts_too():
+    outcome = CaseOutcome(
+        case=_negative_case(),
+        retrieved_ids=["ann#biography"],
+        answer="I don't have information about a veterinary medicine researcher in my data.",
+    )
+    assert outcome.declined
+
+
+def test_a_confident_wrong_answer_does_not_count_as_declining():
+    outcome = CaseOutcome(
+        case=_negative_case(),
+        retrieved_ids=["ann#biography"],
+        answer="Ann Example works on organic chemistry synthesis [1].",
+    )
+    assert not outcome.declined
+    assert not outcome.hit
+
+
+def test_the_report_says_when_refusals_were_judged_on_retrieval_alone():
+    outcomes = [CaseOutcome(case=_negative_case(), retrieved_ids=["ann#biography"])]
+    text = EvalReport(outcomes=outcomes, top_k=8, min_score=0.35).format()
+    assert "decided by the generator" in text
+
+    answered = [
+        CaseOutcome(case=_negative_case(), retrieved_ids=["ann#b"], answer="Ann does [1].")
+    ]
+    assert "decided by the generator" not in EvalReport(
+        outcomes=answered, top_k=8, min_score=0.35
+    ).format()
+
+
+def test_recall_is_not_printed_for_a_run_of_only_refusals():
+    """An empty average is not a 0% score, and must not read like one."""
+    outcomes = [CaseOutcome(case=_negative_case(), retrieved_ids=[])]
+    text = EvalReport(outcomes=outcomes, top_k=8, min_score=0.35).format()
+    assert "Recall@" not in text
+    assert "MRR" not in text
+    assert "Declined right:   100.0%" in text
+
+
+# --- reproducible sampling -------------------------------------------------
+
+
+def _cases(n: int) -> list[EvalCase]:
+    return [EvalCase(id=f"c{i}", question="q?", expected_slugs=("ann",)) for i in range(n)]
+
+
+def test_the_same_seed_picks_the_same_cases():
+    """An experiment whose sample cannot be reproduced cannot be compared."""
+    first = sample_cases(_cases(60), 10, seed=7)
+    assert [c.id for c in first] == [c.id for c in sample_cases(_cases(60), 10, seed=7)]
+    assert len(first) == 10
+
+
+def test_a_different_seed_picks_a_different_sample():
+    assert [c.id for c in sample_cases(_cases(60), 10, seed=1)] != [
+        c.id for c in sample_cases(_cases(60), 10, seed=2)
+    ]
+
+
+def test_sampling_preserves_golden_file_order():
+    picked = sample_cases(_cases(60), 10, seed=3)
+    indices = [int(c.id[1:]) for c in picked]
+    assert indices == sorted(indices)
+
+
+def test_sampling_more_than_exists_returns_everything():
+    cases = _cases(5)
+    assert sample_cases(cases, 10, seed=0) == cases
+
+
+def test_a_prefix_would_have_missed_the_refusals():
+    """Why sampling is random: the golden file groups its cases by kind."""
+    cases = load_cases(GOLDEN)
+    assert not any(c.expect_no_answer for c in cases[:10]), (
+        "the first ten cases contain no refusal, so --limit 10 cannot measure one"
+    )
+    assert any(c.expect_no_answer for c in sample_cases(cases, 20, seed=0))

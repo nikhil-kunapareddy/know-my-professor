@@ -1,0 +1,598 @@
+{
+  "meta": {
+    "golden": "/Users/nikhilkunapareddy/Documents/know-my-professor/evaluation/golden.jsonl",
+    "stages": [
+      "generation",
+      "end_to_end"
+    ],
+    "cases_selected": [
+      "computing-on-encrypted-data",
+      "secure-compilation",
+      "formal-verification-systems",
+      "accessible-computing",
+      "robotics-broad",
+      "games-broad",
+      "paraphrase-image-understanding",
+      "projects-clinical-simulation",
+      "web-summary-scalable-data",
+      "speech-technology"
+    ],
+    "sample": 10,
+    "seed": 7,
+    "top_k": 8,
+    "min_score": 0.35,
+    "index_name": "know-my-professor-m1024",
+    "chat_provider": null,
+    "chat_model": "claude-sonnet-5",
+    "generate_ms_median": 2162.55,
+    "judge_model": "claude-haiku-4-5-20251001",
+    "concurrency": 4,
+    "cache_dir": ".ragas_cache",
+    "from_dump": null
+  },
+  "cases": 10,
+  "metrics": {
+    "faithfulness": {
+      "stage": "generation",
+      "mean": 0.8569230769230769,
+      "scored": 10,
+      "skipped": 0,
+      "errors": 0,
+      "lower_is_better": false,
+      "worst_case": "secure-compilation",
+      "worst_value": 0.25
+    },
+    "response_groundedness": {
+      "stage": "generation",
+      "mean": 0.925,
+      "scored": 10,
+      "skipped": 0,
+      "errors": 0,
+      "lower_is_better": false,
+      "worst_case": "robotics-broad",
+      "worst_value": 0.5
+    },
+    "context_utilization": {
+      "stage": "generation",
+      "mean": 0.4880555555171342,
+      "scored": 10,
+      "skipped": 0,
+      "errors": 0,
+      "lower_is_better": false,
+      "worst_case": "formal-verification-systems",
+      "worst_value": 0.0
+    },
+    "answer_relevancy": {
+      "stage": "generation",
+      "mean": 0.8229043498168209,
+      "scored": 10,
+      "skipped": 0,
+      "errors": 0,
+      "lower_is_better": false,
+      "worst_case": "accessible-computing",
+      "worst_value": 0.7028656045302069
+    },
+    "answer_correctness": {
+      "stage": "end_to_end",
+      "mean": 0.48433043653735175,
+      "scored": 8,
+      "skipped": 2,
+      "errors": 0,
+      "lower_is_better": false,
+      "worst_case": "paraphrase-image-understanding",
+      "worst_value": 0.2745624286330811
+    },
+    "semantic_similarity": {
+      "stage": "end_to_end",
+      "mean": 0.9236638125467266,
+      "scored": 8,
+      "skipped": 2,
+      "errors": 0,
+      "lower_is_better": false,
+      "worst_case": "speech-technology",
+      "worst_value": 0.8804292744468579
+    },
+    "noise_sensitivity": {
+      "stage": "end_to_end",
+      "mean": 0.22860576923076925,
+      "scored": 8,
+      "skipped": 2,
+      "errors": 0,
+      "lower_is_better": true,
+      "worst_case": "speech-technology",
+      "worst_value": 0.625
+    }
+  },
+  "scores": [
+    {
+      "case_id": "computing-on-encrypted-data",
+      "metric": "faithfulness",
+      "value": 1.0,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "computing-on-encrypted-data",
+      "metric": "response_groundedness",
+      "value": 1.0,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "computing-on-encrypted-data",
+      "metric": "context_utilization",
+      "value": 0.99999999995,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "computing-on-encrypted-data",
+      "metric": "answer_relevancy",
+      "value": 0.7844328755160018,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "computing-on-encrypted-data",
+      "metric": "answer_correctness",
+      "value": 0.483870128453044,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "computing-on-encrypted-data",
+      "metric": "semantic_similarity",
+      "value": 0.9354805138121762,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "computing-on-encrypted-data",
+      "metric": "noise_sensitivity",
+      "value": 0.4,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "secure-compilation",
+      "metric": "faithfulness",
+      "value": 0.25,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "secure-compilation",
+      "metric": "response_groundedness",
+      "value": 1.0,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "secure-compilation",
+      "metric": "context_utilization",
+      "value": 0.9999999999,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "secure-compilation",
+      "metric": "answer_relevancy",
+      "value": 0.7564106725786982,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "secure-compilation",
+      "metric": "answer_correctness",
+      "value": 0.4819678683477451,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "secure-compilation",
+      "metric": "semantic_similarity",
+      "value": 0.9274716604517776,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "secure-compilation",
+      "metric": "noise_sensitivity",
+      "value": 0.0,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "formal-verification-systems",
+      "metric": "faithfulness",
+      "value": 0.7692307692307693,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "formal-verification-systems",
+      "metric": "response_groundedness",
+      "value": 1.0,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "formal-verification-systems",
+      "metric": "context_utilization",
+      "value": 0.0,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "formal-verification-systems",
+      "metric": "answer_relevancy",
+      "value": 0.8960874002169242,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "formal-verification-systems",
+      "metric": "answer_correctness",
+      "value": 0.37336490480961465,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "formal-verification-systems",
+      "metric": "semantic_similarity",
+      "value": 0.9223059420345059,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "formal-verification-systems",
+      "metric": "noise_sensitivity",
+      "value": 0.15384615384615385,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "accessible-computing",
+      "metric": "faithfulness",
+      "value": 1.0,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "accessible-computing",
+      "metric": "response_groundedness",
+      "value": 1.0,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "accessible-computing",
+      "metric": "context_utilization",
+      "value": 0.9999999999,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "accessible-computing",
+      "metric": "answer_relevancy",
+      "value": 0.7028656045302069,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "accessible-computing",
+      "metric": "answer_correctness",
+      "value": 0.3838667734087535,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "accessible-computing",
+      "metric": "semantic_similarity",
+      "value": 0.9350603298413257,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "accessible-computing",
+      "metric": "noise_sensitivity",
+      "value": 0.0,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "robotics-broad",
+      "metric": "faithfulness",
+      "value": 0.8,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "robotics-broad",
+      "metric": "response_groundedness",
+      "value": 0.5,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "robotics-broad",
+      "metric": "context_utilization",
+      "value": 0.0,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "robotics-broad",
+      "metric": "answer_relevancy",
+      "value": 0.8367593918815629,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "robotics-broad",
+      "metric": "answer_correctness",
+      "value": null,
+      "status": "skipped",
+      "detail": "no reference in the golden case"
+    },
+    {
+      "case_id": "robotics-broad",
+      "metric": "semantic_similarity",
+      "value": null,
+      "status": "skipped",
+      "detail": "no reference in the golden case"
+    },
+    {
+      "case_id": "robotics-broad",
+      "metric": "noise_sensitivity",
+      "value": null,
+      "status": "skipped",
+      "detail": "no reference in the golden case"
+    },
+    {
+      "case_id": "games-broad",
+      "metric": "faithfulness",
+      "value": 1.0,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "games-broad",
+      "metric": "response_groundedness",
+      "value": 1.0,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "games-broad",
+      "metric": "context_utilization",
+      "value": 0.2916666666520833,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "games-broad",
+      "metric": "answer_relevancy",
+      "value": 0.8326917605686658,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "games-broad",
+      "metric": "answer_correctness",
+      "value": null,
+      "status": "skipped",
+      "detail": "no reference in the golden case"
+    },
+    {
+      "case_id": "games-broad",
+      "metric": "semantic_similarity",
+      "value": null,
+      "status": "skipped",
+      "detail": "no reference in the golden case"
+    },
+    {
+      "case_id": "games-broad",
+      "metric": "noise_sensitivity",
+      "value": null,
+      "status": "skipped",
+      "detail": "no reference in the golden case"
+    },
+    {
+      "case_id": "paraphrase-image-understanding",
+      "metric": "faithfulness",
+      "value": 0.75,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "paraphrase-image-understanding",
+      "metric": "response_groundedness",
+      "value": 0.75,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "paraphrase-image-understanding",
+      "metric": "context_utilization",
+      "value": 0.0,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "paraphrase-image-understanding",
+      "metric": "answer_relevancy",
+      "value": 0.7821608865360302,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "paraphrase-image-understanding",
+      "metric": "answer_correctness",
+      "value": 0.2745624286330811,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "paraphrase-image-understanding",
+      "metric": "semantic_similarity",
+      "value": 0.8839025586344114,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "paraphrase-image-understanding",
+      "metric": "noise_sensitivity",
+      "value": 0.25,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "projects-clinical-simulation",
+      "metric": "faithfulness",
+      "value": 1.0,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "projects-clinical-simulation",
+      "metric": "response_groundedness",
+      "value": 1.0,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "projects-clinical-simulation",
+      "metric": "context_utilization",
+      "value": 0.9999999999,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "projects-clinical-simulation",
+      "metric": "answer_relevancy",
+      "value": 0.8311125222082886,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "projects-clinical-simulation",
+      "metric": "answer_correctness",
+      "value": 0.6836107835072514,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "projects-clinical-simulation",
+      "metric": "semantic_similarity",
+      "value": 0.934343922196583,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "projects-clinical-simulation",
+      "metric": "noise_sensitivity",
+      "value": 0.0,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "web-summary-scalable-data",
+      "metric": "faithfulness",
+      "value": 1.0,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "web-summary-scalable-data",
+      "metric": "response_groundedness",
+      "value": 1.0,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "web-summary-scalable-data",
+      "metric": "context_utilization",
+      "value": 0.5888888888692593,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "web-summary-scalable-data",
+      "metric": "answer_relevancy",
+      "value": 0.9550389958199771,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "web-summary-scalable-data",
+      "metric": "answer_correctness",
+      "value": 0.7425790747390437,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "web-summary-scalable-data",
+      "metric": "semantic_similarity",
+      "value": 0.9703162989561751,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "web-summary-scalable-data",
+      "metric": "noise_sensitivity",
+      "value": 0.4,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "speech-technology",
+      "metric": "faithfulness",
+      "value": 1.0,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "speech-technology",
+      "metric": "response_groundedness",
+      "value": 1.0,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "speech-technology",
+      "metric": "context_utilization",
+      "value": 0.0,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "speech-technology",
+      "metric": "answer_relevancy",
+      "value": 0.8514833883118543,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "speech-technology",
+      "metric": "answer_correctness",
+      "value": 0.45082153040028045,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "speech-technology",
+      "metric": "semantic_similarity",
+      "value": 0.8804292744468579,
+      "status": "ok",
+      "detail": ""
+    },
+    {
+      "case_id": "speech-technology",
+      "metric": "noise_sensitivity",
+      "value": 0.625,
+      "status": "ok",
+      "detail": ""
+    }
+  ]
+}

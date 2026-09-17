@@ -11,6 +11,11 @@ The scoring itself is pure and unit-tested in tests/test_eval.py.
 
 Required env: PINECONE_API_KEY + the embedding provider's key (and the chat
 provider's key with --generate).
+
+Scores what a slug list can score: was the right professor retrieved, how high
+up, and did the answer cite them. For the questions that need a judge — is the
+answer supported by the context, does it address the question, is it correct —
+see ``evaluation/run_ragas.py``.
 """
 
 from __future__ import annotations
@@ -48,35 +53,17 @@ def main() -> None:
         sys.exit(f"no cases in {args.golden}")
 
     # Imported here so --help works without credentials or provider SDKs.
-    from pinecone import Pinecone
-
-    from core.retrieval.pinecone_retriever import PineconeRetriever
-    from shared.embeddings import build_embedder
-    from shared.settings import ApiSettings, MissingSettingError
+    from evaluation.live import connect
+    from shared.settings import MissingSettingError
 
     try:
-        settings = ApiSettings.from_env()
+        live = connect()
     except MissingSettingError as e:
         sys.exit(f"error: {e}")
 
-    embedder = build_embedder(settings.embed_provider)
-    index = Pinecone(api_key=settings.pinecone_api_key).Index(settings.index_name)
-    retriever = PineconeRetriever(index)
+    pipeline = live.pipeline(args.top_k, args.min_score) if args.generate else None
 
-    pipeline = None
-    if args.generate:
-        from core.llm import build_generator
-        from core.pipeline import RAGPipeline
-
-        pipeline = RAGPipeline(
-            embedder=embedder,
-            retriever=retriever,
-            generator=build_generator(settings.chat_provider, model=settings.chat_model),
-            top_k=args.top_k,
-            min_score=args.min_score,
-        )
-
-    print(f"Evaluating {len(cases)} case(s) against {settings.index_name} "
+    print(f"Evaluating {len(cases)} case(s) against {live.settings.index_name} "
           f"(top_k={args.top_k}, min_score={args.min_score}, generate={args.generate})")
 
     outcomes: list[CaseOutcome] = []
@@ -89,12 +76,11 @@ def main() -> None:
                 answer=result.answer,
             ))
         else:
-            results = retriever.retrieve(embedder.embed_query(case.question), args.top_k)
-            kept = [r for r in results if r.score >= args.min_score]
+            kept = live.retrieve(case.question, args.top_k, args.min_score)
             outcomes.append(CaseOutcome(case=case, retrieved_ids=[r.document_id for r in kept]))
         print(f"  {'HIT ' if outcomes[-1].hit else 'MISS'} [{case.id}]")
 
-    report = EvalReport(outcomes=outcomes, top_k=args.top_k)
+    report = EvalReport(outcomes=outcomes, top_k=args.top_k, min_score=args.min_score)
     print(report.format())
 
     if args.min_recall is not None and report.recall_at_k < args.min_recall:

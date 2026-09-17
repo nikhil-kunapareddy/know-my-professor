@@ -245,3 +245,34 @@ def test_serving_path_does_not_pace(monkeypatch):
 
     MistralEmbedder(client=_FakeMistral(), pace_seconds=1.0).embed_texts(["q"])
     assert slept == [1.0]
+
+
+# --- effort is Claude-5-only ----------------------------------------------
+
+
+def test_effort_is_sent_only_to_models_that_accept_it():
+    """Anthropic 400s on effort for anything outside the Claude 5 family."""
+    from core.llm.anthropic import supports_effort
+
+    assert supports_effort("claude-opus-5")
+    assert supports_effort("claude-sonnet-5")
+    assert supports_effort("claude-fable-5-1")
+    assert not supports_effort("claude-haiku-4-5-20251001")
+    assert not supports_effort("claude-3-5-sonnet-20241022")
+
+
+def test_an_older_model_is_called_without_output_config():
+    client = _FakeAnthropic([_FakeBlock("text", "hi")])
+    generator = AnthropicGenerator(client=client, model="claude-haiku-4-5-20251001")
+    generator.generate("sys", "q")
+
+    assert "output_config" not in client.messages.kwargs, (
+        "sending effort to a non-Claude-5 model is a hard 400"
+    )
+    assert generator.effort is None
+
+
+def test_effort_can_be_switched_off_explicitly():
+    client = _FakeAnthropic([_FakeBlock("text", "hi")])
+    AnthropicGenerator(client=client, effort=None).generate("sys", "q")
+    assert "output_config" not in client.messages.kwargs
