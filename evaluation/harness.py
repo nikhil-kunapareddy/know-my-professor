@@ -13,10 +13,12 @@ Pure functions over recorded results: no network, no provider SDKs. The runner
 from __future__ import annotations
 
 import json
+import random
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from core.llm.prompts import cited_numbers
+from core.pipeline import NO_ANSWER
 
 #: Vector IDs are ``{slug}#{section_type}``.
 ID_SEPARATOR = "#"
@@ -39,20 +41,45 @@ class EvalCase:
 
     id: str
     question: str
-    expected_slugs: tuple[str, ...]
+    expected_slugs: tuple[str, ...] = ()
     expected_sections: tuple[str, ...] = ()
+    #: True when the RIGHT behaviour is to decline. Without cases like these an
+    #: evaluation can only reward retrieving more, so raising the relevance floor
+    #: always looks free — which is exactly the question MIN_RETRIEVAL_SCORE
+    #: needs answered. A negative case names no slugs.
+    expect_no_answer: bool = False
+    #: A ground-truth answer, in prose. Optional, and only the LLM-judged
+    #: metrics use it (``evaluation.ragas_eval``): every "was the answer right?"
+    #: or "was the right context retrieved?" judgement needs something to
+    #: compare against, and slugs alone cannot express a claim. Cases without
+    #: one are still scored by every metric that does not need it.
+    reference: str = ""
     notes: str = ""
 
     @classmethod
     def from_dict(cls, raw: dict) -> EvalCase:
-        missing = {"id", "question", "expected_slugs"} - set(raw)
+        missing = {"id", "question"} - set(raw)
         if missing:
             raise ValueError(f"golden case is missing {sorted(missing)}: {raw}")
+
+        expect_no_answer = bool(raw.get("expect_no_answer", False))
+        slugs = tuple(raw.get("expected_slugs", ()))
+        # A case has to say what "right" looks like. Either it names who should
+        # be retrieved, or it declares that nothing should be.
+        if not slugs and not expect_no_answer:
+            raise ValueError(
+                f"golden case must give expected_slugs or set expect_no_answer: {raw}"
+            )
+        if slugs and expect_no_answer:
+            raise ValueError(f"a no-answer case cannot also expect slugs: {raw}")
+
         return cls(
             id=raw["id"],
             question=raw["question"],
-            expected_slugs=tuple(raw["expected_slugs"]),
+            expected_slugs=slugs,
             expected_sections=tuple(raw.get("expected_sections", ())),
+            expect_no_answer=expect_no_answer,
+            reference=raw.get("reference", ""),
             notes=raw.get("notes", ""),
         )
 
@@ -74,6 +101,24 @@ def load_cases(path: Path) -> list[EvalCase]:
     if duplicates:
         raise ValueError(f"duplicate case ids in {path}: {duplicates}")
     return cases
+
+
+def sample_cases(cases: list[EvalCase], count: int, seed: int) -> list[EvalCase]:
+    """A reproducible random subset, in the golden file's own order.
+
+    Random rather than "the first N" because the golden file is grouped by what
+    each block probes -- narrow topics, then broad, then sections, then the
+    no-answer cases at the end. Taking a prefix would measure one block and
+    never see a refusal. The seed is required, not optional: an experiment whose
+    sample cannot be reproduced cannot be compared to the next one.
+
+    Order is preserved so two runs with the same seed also report in the same
+    order, which makes their outputs diffable.
+    """
+    if count >= len(cases):
+        return list(cases)
+    chosen = set(random.Random(seed).sample(range(len(cases)), count))
+    return [case for i, case in enumerate(cases) if i in chosen]
 
 
 @dataclass
@@ -103,8 +148,39 @@ class CaseOutcome:
         return None
 
     @property
+    def declined(self) -> bool:
+        """Did the system refuse to answer?
+
+        Three spellings count, and the third is the one that matters. Exact
+        equality with ``NO_ANSWER`` under-counts badly: asked something the
+        corpus cannot support, the model reliably opens with the refusal the
+        prompt asks for and then adds an honest caveat about the nearest
+        material it did see — "I don't have that information in my data. The
+        closest is Benjamin Gyori, who works on computational systems biology
+        [4]." That is the behaviour worth having, not a failure, so a refusal is
+        recognised by the prompt's own phrasing rather than by string identity.
+
+        An empty result also counts, because a retrieval-only run never reaches
+        the model: at a nonzero floor, nothing retrieved IS the refusal.
+        """
+        if not self.retrieved_ids:
+            return True
+        if not self.answer:
+            return False
+        normalised = " ".join(self.answer.lower().split())
+        return self.answer == NO_ANSWER or (
+            "i don't have" in normalised and "in my data" in normalised
+        )
+
+    @property
     def hit(self) -> bool:
-        """Did retrieval surface at least one expected professor?"""
+        """Did the case get the outcome it asked for?
+
+        For a normal case that means an expected professor was retrieved; for a
+        no-answer case it means the system correctly declined.
+        """
+        if self.case.expect_no_answer:
+            return self.declined
         return self.rank is not None
 
     @property
@@ -151,28 +227,53 @@ class EvalReport:
 
     outcomes: list[CaseOutcome]
     top_k: int
+    #: The floor the run applied. Recorded because no-answer cases cannot fail
+    #: at 0.0 — nothing is ever filtered, so every case retrieves something.
+    min_score: float = 0.0
 
     @property
     def total(self) -> int:
         return len(self.outcomes)
 
     @property
+    def positives(self) -> list[CaseOutcome]:
+        """Cases that expect an answer."""
+        return [o for o in self.outcomes if not o.case.expect_no_answer]
+
+    @property
+    def negatives(self) -> list[CaseOutcome]:
+        """Cases whose correct outcome is a refusal."""
+        return [o for o in self.outcomes if o.case.expect_no_answer]
+
+    @property
     def recall_at_k(self) -> float:
-        """Share of questions where an expected professor was retrieved at all.
+        """Share of answerable questions where an expected professor was retrieved.
 
         The headline number: if the right chunk never reaches the model, no
-        amount of prompt work can produce a correct answer.
+        amount of prompt work can produce a correct answer. Computed over
+        positive cases only — averaging refusals into it would let a system that
+        retrieves nothing score well on the half of the set that wants nothing.
         """
-        if not self.outcomes:
+        scored = self.positives
+        if not scored:
             return 0.0
-        return sum(1 for o in self.outcomes if o.hit) / self.total
+        return sum(1 for o in scored if o.hit) / len(scored)
 
     @property
     def mrr(self) -> float:
-        """Mean reciprocal rank — how high up the right professor lands."""
-        if not self.outcomes:
+        """Mean reciprocal rank over answerable questions — how high the right professor lands."""
+        scored = self.positives
+        if not scored:
             return 0.0
-        return sum(o.reciprocal_rank for o in self.outcomes) / self.total
+        return sum(o.reciprocal_rank for o in scored) / len(scored)
+
+    @property
+    def no_answer_accuracy(self) -> float | None:
+        """Share of no-answer cases the system correctly declined (None if there are none)."""
+        scored = self.negatives
+        if not scored:
+            return None
+        return sum(1 for o in scored if o.hit) / len(scored)
 
     @property
     def section_recall(self) -> float | None:
@@ -196,22 +297,44 @@ class EvalReport:
         """A short human-readable report, misses listed so they can be inspected."""
         lines = [
             "",
-            f"Cases:            {self.total}",
-            f"Recall@{self.top_k:<10} {self.recall_at_k:.1%}",
-            f"MRR:              {self.mrr:.3f}",
+            f"Cases:            {self.total}"
+            + (f"  ({len(self.positives)} answerable, {len(self.negatives)} no-answer)"
+               if self.negatives else ""),
         ]
+        # Printing "Recall@8 0.0%" for a run of nothing but refusals reads as a
+        # catastrophe when it is an empty average.
+        if self.positives:
+            lines.append(f"Recall@{self.top_k:<10} {self.recall_at_k:.1%}")
+            lines.append(f"MRR:              {self.mrr:.3f}")
         if self.section_recall is not None:
             lines.append(f"Section recall:   {self.section_recall:.1%}")
         if self.citation_precision is not None:
             lines.append(f"Citation prec.:   {self.citation_precision:.1%}")
+        if self.no_answer_accuracy is not None:
+            lines.append(f"Declined right:   {self.no_answer_accuracy:.1%}"
+                         f"  ({len(self.negatives)} no-answer case(s))")
+            if not any(o.answer for o in self.negatives):
+                lines.append("  note: no answers were generated, so these were judged on retrieval")
+                lines.append("        alone — a no-answer case is really decided by the generator.")
+                lines.append("        Re-run with --generate to score refusals properly.")
 
-        if self.misses:
+        positive_misses = [o for o in self.misses if not o.case.expect_no_answer]
+        if positive_misses:
             lines.append("")
-            lines.append(f"Misses ({len(self.misses)}):")
-            for outcome in self.misses:
+            lines.append(f"Misses ({len(positive_misses)}):")
+            for outcome in positive_misses:
                 expected = ", ".join(outcome.case.expected_slugs)
                 got = ", ".join(outcome.retrieved_slugs[:5]) or "nothing"
                 lines.append(f"  [{outcome.case.id}] {outcome.case.question}")
                 lines.append(f"      expected: {expected}")
                 lines.append(f"      got:      {got}")
+
+        wrongly_answered = [o for o in self.misses if o.case.expect_no_answer]
+        if wrongly_answered:
+            lines.append("")
+            lines.append(f"Should have declined ({len(wrongly_answered)}):")
+            for outcome in wrongly_answered:
+                got = ", ".join(outcome.retrieved_slugs[:5]) or "nothing"
+                lines.append(f"  [{outcome.case.id}] {outcome.case.question}")
+                lines.append(f"      retrieved: {got}")
         return "\n".join(lines)

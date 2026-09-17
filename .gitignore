@@ -31,6 +31,13 @@ env/
 /CLAUDE.md
 /system_architecture.md
 
+# --- Evaluation artifacts ---
+# The judge cache is a cost optimisation, and runs/ is for throwaway dumps.
+# evaluation/results/ is deliberately NOT ignored: a stored result is evidence
+# for a decision and has to stay readable next to the settings that produced it.
+.ragas_cache/
+/evaluation/runs/
+
 # setuptools artifacts from a non-editable `pip install .`
 build/
 dist/

@@ -18,6 +18,20 @@ from .base import Generator
 #: ``python -m evaluation.run_eval`` rather than guessing.
 DEFAULT_EFFORT = "low"
 
+#: ``effort`` exists only on the Claude 5 family. Sending it to anything else is
+#: a hard 400 — "This model does not support the effort parameter" — so
+#: CHAT_MODEL=claude-haiku-4-5-20251001 used to fail on every request, despite
+#: CHAT_MODEL being documented as the way to switch models without a rebuild.
+#: Matching on the family rather than listing ids keeps new 5-series models
+#: working without an edit here.
+_EFFORT_MODEL_PREFIXES = ("claude-opus-5", "claude-sonnet-5", "claude-fable-5", "claude-haiku-5")
+
+
+def supports_effort(model: str) -> bool:
+    """Whether this model accepts ``output_config={"effort": ...}``."""
+    return any(model.startswith(prefix) for prefix in _EFFORT_MODEL_PREFIXES)
+
+
 #: A ceiling, not a target: cited answers run a few hundred tokens. It is set
 #: high because hitting the cap truncates mid-sentence, and unused headroom
 #: costs nothing (billing is on tokens produced).
@@ -32,6 +46,8 @@ class AnthropicGenerator(Generator):
     - **No ``temperature``.** Sampling parameters are removed on the Claude 5
       family and return a 400. Determinism is not available as a knob here;
       ``effort`` is the closest equivalent lever.
+    - **``effort`` is Claude-5-only.** It is dropped for any other model, which
+      is what makes ``CHAT_MODEL`` usable across families rather than a 400.
     - **Thinking is on.** Claude Opus 5 runs adaptive thinking whenever
       ``thinking`` is omitted, so ``response.content`` carries thinking blocks
       alongside text ones and ``generate`` must join only the text. Disabling
@@ -48,11 +64,13 @@ class AnthropicGenerator(Generator):
         client=None,
         model: str | None = None,
         max_tokens: int = DEFAULT_MAX_TOKENS,
-        effort: str = DEFAULT_EFFORT,
+        effort: str | None = DEFAULT_EFFORT,
     ):
         self.model = model or self.default_model
         self.max_tokens = max_tokens
-        self.effort = effort
+        # None means "never send it". Otherwise it is sent only where the model
+        # accepts it, so an older model can be selected with CHAT_MODEL.
+        self.effort = effort if supports_effort(self.model) else None
         self._client = client
 
     @property
@@ -73,12 +91,13 @@ class AnthropicGenerator(Generator):
         A refusal arrives as a 200 with ``stop_reason == "refusal"``, not as an
         exception, so it is checked explicitly; "" is the pipeline's no-answer case.
         """
+        options = {"output_config": {"effort": self.effort}} if self.effort else {}
         response = self.client.messages.create(
             model=self.model,
             max_tokens=self.max_tokens,
             system=system_instruction,
-            output_config={"effort": self.effort},
             messages=[{"role": "user", "content": user_message}],
+            **options,
         )
 
         if getattr(response, "stop_reason", None) == "refusal":
