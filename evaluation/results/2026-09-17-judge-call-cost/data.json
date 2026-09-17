@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "measured": "2026-09-17",
+    "how": "Wrapped judge.agenerate and the embedder's embed_texts with counters, then scored one case with every metric. Cache disabled so every call is real.",
+    "case_3_chunks": "a synthetic sample with 3 retrieved contexts",
+    "case_8_chunks": "crypto-secure-computation, live retrieval at top_k=8",
+    "judge_model": "claude-haiku-4-5-20251001"
+  },
+  "metrics": [
+    {"metric": "context_relevance",     "stage": "retrieval",  "judge_calls_3_chunks": 2, "judge_calls_8_chunks": 2,  "embed_calls": 0, "seconds_8_chunks": 1.3},
+    {"metric": "context_precision",     "stage": "retrieval",  "judge_calls_3_chunks": 3, "judge_calls_8_chunks": 8,  "embed_calls": 0, "seconds_8_chunks": 13.3},
+    {"metric": "context_recall",        "stage": "retrieval",  "judge_calls_3_chunks": 1, "judge_calls_8_chunks": 1,  "embed_calls": 0, "seconds_8_chunks": 2.4},
+    {"metric": "context_entity_recall", "stage": "retrieval",  "judge_calls_3_chunks": 2, "judge_calls_8_chunks": 2,  "embed_calls": 0, "seconds_8_chunks": 5.1},
+    {"metric": "faithfulness",          "stage": "generation", "judge_calls_3_chunks": 2, "judge_calls_8_chunks": 2,  "embed_calls": 0, "seconds_8_chunks": 4.9},
+    {"metric": "response_groundedness", "stage": "generation", "judge_calls_3_chunks": 2, "judge_calls_8_chunks": 2,  "embed_calls": 0, "seconds_8_chunks": 1.3},
+    {"metric": "context_utilization",   "stage": "generation", "judge_calls_3_chunks": 3, "judge_calls_8_chunks": 8,  "embed_calls": 0, "seconds_8_chunks": 13.9},
+    {"metric": "answer_relevancy",      "stage": "generation", "judge_calls_3_chunks": 3, "judge_calls_8_chunks": 3,  "embed_calls": 2, "seconds_8_chunks": 6.4},
+    {"metric": "answer_correctness",    "stage": "end_to_end", "judge_calls_3_chunks": 3, "judge_calls_8_chunks": 3,  "embed_calls": 2, "seconds_8_chunks": 19.3},
+    {"metric": "semantic_similarity",   "stage": "end_to_end", "judge_calls_3_chunks": 0, "judge_calls_8_chunks": 0,  "embed_calls": 2, "seconds_8_chunks": 4.0},
+    {"metric": "noise_sensitivity",     "stage": "end_to_end", "judge_calls_3_chunks": 9, "judge_calls_8_chunks": 19, "embed_calls": 0, "seconds_8_chunks": 62.4}
+  ]
+}

@@ -1,0 +1,181 @@
+Running 10 case(s) against know-my-professor-m1024 (top_k=8, min_score=0.35, generate=True)
+  [computing-on-encrypted-data] 8 chunks
+  [secure-compilation] 8 chunks
+  [formal-verification-systems] 8 chunks
+  [accessible-computing] 8 chunks
+  [robotics-broad] 8 chunks
+  [games-broad] 8 chunks
+  [paraphrase-image-understanding] 8 chunks
+  [projects-clinical-simulation] 8 chunks
+  [web-summary-scalable-data] 8 chunks
+  [speech-technology] 8 chunks
+  wrote 10 sample(s) to evaluation/results/2026-09-17-llm-selection/claude-sonnet-5/samples.jsonl
+  note: 2/10 case(s) have no reference; reference-based metrics will skip them
+Judging 10 sample(s) x 7 metric(s) [generation, end_to_end] with claude-haiku-4-5-20251001, cache .ragas_cache
+    1/70 [robotics-broad] answer_correctness SKIP
+    2/70 [robotics-broad] semantic_similarity SKIP
+    3/70 [robotics-broad] noise_sensitivity SKIP
+    4/70 [games-broad] answer_correctness SKIP
+    5/70 [games-broad] semantic_similarity SKIP
+    6/70 [games-broad] noise_sensitivity SKIP
+    7/70 [computing-on-encrypted-data] response_groundedness
+    8/70 [computing-on-encrypted-data] answer_relevancy
+    9/70 [computing-on-encrypted-data] semantic_similarity
+   10/70 [computing-on-encrypted-data] faithfulness
+   11/70 [secure-compilation] faithfulness
+   12/70 [computing-on-encrypted-data] answer_correctness
+   13/70 [secure-compilation] response_groundedness
+   14/70 [computing-on-encrypted-data] context_utilization
+   15/70 [secure-compilation] answer_relevancy
+   16/70 [secure-compilation] semantic_similarity
+   17/70 [secure-compilation] answer_correctness
+   18/70 [secure-compilation] context_utilization
+   19/70 [formal-verification-systems] response_groundedness
+   20/70 [formal-verification-systems] faithfulness
+   21/70 [computing-on-encrypted-data] noise_sensitivity
+   22/70 [formal-verification-systems] answer_relevancy
+   23/70 [formal-verification-systems] semantic_similarity
+   24/70 [secure-compilation] noise_sensitivity
+   25/70 [formal-verification-systems] context_utilization
+   26/70 [accessible-computing] faithfulness
+   27/70 [formal-verification-systems] answer_correctness
+   28/70 [accessible-computing] response_groundedness
+   29/70 [accessible-computing] answer_relevancy
+   30/70 [accessible-computing] semantic_similarity
+   31/70 [accessible-computing] answer_correctness
+   32/70 [robotics-broad] faithfulness
+   33/70 [accessible-computing] context_utilization
+   34/70 [robotics-broad] response_groundedness
+   35/70 [robotics-broad] answer_relevancy
+   36/70 [games-broad] faithfulness
+   37/70 [games-broad] response_groundedness
+   38/70 [robotics-broad] context_utilization
+   39/70 [accessible-computing] noise_sensitivity
+   40/70 [games-broad] answer_relevancy
+   41/70 [paraphrase-image-understanding] response_groundedness
+   42/70 [games-broad] context_utilization
+   43/70 [paraphrase-image-understanding] faithfulness
+   44/70 [formal-verification-systems] noise_sensitivity
+   45/70 [paraphrase-image-understanding] semantic_similarity
+   46/70 [paraphrase-image-understanding] answer_relevancy
+   47/70 [paraphrase-image-understanding] context_utilization
+   48/70 [projects-clinical-simulation] faithfulness
+   49/70 [projects-clinical-simulation] response_groundedness
+   50/70 [projects-clinical-simulation] answer_relevancy
+   51/70 [paraphrase-image-understanding] answer_correctness
+   52/70 [projects-clinical-simulation] semantic_similarity
+   53/70 [projects-clinical-simulation] context_utilization
+   54/70 [projects-clinical-simulation] answer_correctness
+   55/70 [web-summary-scalable-data] response_groundedness
+   56/70 [web-summary-scalable-data] faithfulness
+   57/70 [web-summary-scalable-data] answer_relevancy
+   58/70 [web-summary-scalable-data] context_utilization
+   59/70 [web-summary-scalable-data] semantic_similarity
+   60/70 [web-summary-scalable-data] answer_correctness
+   61/70 [speech-technology] faithfulness
+   62/70 [speech-technology] response_groundedness
+   63/70 [projects-clinical-simulation] noise_sensitivity
+   64/70 [speech-technology] answer_relevancy
+   65/70 [speech-technology] context_utilization
+   66/70 [speech-technology] semantic_similarity
+   67/70 [paraphrase-image-understanding] noise_sensitivity
+   68/70 [speech-technology] answer_correctness
+   69/70 [web-summary-scalable-data] noise_sensitivity
+   70/70 [speech-technology] noise_sensitivity
+
+NON-LLM BASELINE (evaluation/harness.py, same run)
+  recall@8: 100.0%   MRR: 0.950   citation precision: 58.7%
+
+GENERATION
+  metric                      mean      n   skip   err  worst case
+  faithfulness               0.857     10      0     0  secure-compilation (0.25)
+  response_groundedness      0.925     10      0     0  robotics-broad (0.50)
+  context_utilization        0.488     10      0     0  formal-verification-systems (0.00)
+  answer_relevancy           0.823     10      0     0  accessible-computing (0.70)
+
+END TO END
+  metric                      mean      n   skip   err  worst case
+  answer_correctness         0.484      8      2     0  paraphrase-image-understanding (0.27)
+  semantic_similarity        0.924      8      2     0  speech-technology (0.88)
+  noise_sensitivity          0.229      8      2     0  speech-technology (0.62)  (lower is better)
+
+Skipped 6 metric-case pair(s):
+     6  no reference in the golden case
+
+What the weak numbers mean:
+  context_utilization: the answer ignored the top-ranked chunks — but note this metric reads 0 on list-style answers regardless (see evaluation/results/2026-09-17-sample10)
+  answer_correctness: the answer disagrees with the reference on the facts
+
+Per case:
+  [computing-on-encrypted-data] faithfulness              1.00  ok
+  [computing-on-encrypted-data] response_groundedness     1.00  ok
+  [computing-on-encrypted-data] context_utilization       1.00  ok
+  [computing-on-encrypted-data] answer_relevancy          0.78  ok
+  [computing-on-encrypted-data] answer_correctness        0.48  ok
+  [computing-on-encrypted-data] semantic_similarity       0.94  ok
+  [computing-on-encrypted-data] noise_sensitivity         0.40  ok
+  [secure-compilation    ] faithfulness              0.25  ok
+  [secure-compilation    ] response_groundedness     1.00  ok
+  [secure-compilation    ] context_utilization       1.00  ok
+  [secure-compilation    ] answer_relevancy          0.76  ok
+  [secure-compilation    ] answer_correctness        0.48  ok
+  [secure-compilation    ] semantic_similarity       0.93  ok
+  [secure-compilation    ] noise_sensitivity         0.00  ok
+  [formal-verification-systems] faithfulness              0.77  ok
+  [formal-verification-systems] response_groundedness     1.00  ok
+  [formal-verification-systems] context_utilization       0.00  ok
+  [formal-verification-systems] answer_relevancy          0.90  ok
+  [formal-verification-systems] answer_correctness        0.37  ok
+  [formal-verification-systems] semantic_similarity       0.92  ok
+  [formal-verification-systems] noise_sensitivity         0.15  ok
+  [accessible-computing  ] faithfulness              1.00  ok
+  [accessible-computing  ] response_groundedness     1.00  ok
+  [accessible-computing  ] context_utilization       1.00  ok
+  [accessible-computing  ] answer_relevancy          0.70  ok
+  [accessible-computing  ] answer_correctness        0.38  ok
+  [accessible-computing  ] semantic_similarity       0.94  ok
+  [accessible-computing  ] noise_sensitivity         0.00  ok
+  [robotics-broad        ] faithfulness              0.80  ok
+  [robotics-broad        ] response_groundedness     0.50  ok
+  [robotics-broad        ] context_utilization       0.00  ok
+  [robotics-broad        ] answer_relevancy          0.84  ok
+  [robotics-broad        ] answer_correctness          --  skipped — no reference in the golden case
+  [robotics-broad        ] semantic_similarity         --  skipped — no reference in the golden case
+  [robotics-broad        ] noise_sensitivity           --  skipped — no reference in the golden case
+  [games-broad           ] faithfulness              1.00  ok
+  [games-broad           ] response_groundedness     1.00  ok
+  [games-broad           ] context_utilization       0.29  ok
+  [games-broad           ] answer_relevancy          0.83  ok
+  [games-broad           ] answer_correctness          --  skipped — no reference in the golden case
+  [games-broad           ] semantic_similarity         --  skipped — no reference in the golden case
+  [games-broad           ] noise_sensitivity           --  skipped — no reference in the golden case
+  [paraphrase-image-understanding] faithfulness              0.75  ok
+  [paraphrase-image-understanding] response_groundedness     0.75  ok
+  [paraphrase-image-understanding] context_utilization       0.00  ok
+  [paraphrase-image-understanding] answer_relevancy          0.78  ok
+  [paraphrase-image-understanding] answer_correctness        0.27  ok
+  [paraphrase-image-understanding] semantic_similarity       0.88  ok
+  [paraphrase-image-understanding] noise_sensitivity         0.25  ok
+  [projects-clinical-simulation] faithfulness              1.00  ok
+  [projects-clinical-simulation] response_groundedness     1.00  ok
+  [projects-clinical-simulation] context_utilization       1.00  ok
+  [projects-clinical-simulation] answer_relevancy          0.83  ok
+  [projects-clinical-simulation] answer_correctness        0.68  ok
+  [projects-clinical-simulation] semantic_similarity       0.93  ok
+  [projects-clinical-simulation] noise_sensitivity         0.00  ok
+  [web-summary-scalable-data] faithfulness              1.00  ok
+  [web-summary-scalable-data] response_groundedness     1.00  ok
+  [web-summary-scalable-data] context_utilization       0.59  ok
+  [web-summary-scalable-data] answer_relevancy          0.96  ok
+  [web-summary-scalable-data] answer_correctness        0.74  ok
+  [web-summary-scalable-data] semantic_similarity       0.97  ok
+  [web-summary-scalable-data] noise_sensitivity         0.40  ok
+  [speech-technology     ] faithfulness              1.00  ok
+  [speech-technology     ] response_groundedness     1.00  ok
+  [speech-technology     ] context_utilization       0.00  ok
+  [speech-technology     ] answer_relevancy          0.85  ok
+  [speech-technology     ] answer_correctness        0.45  ok
+  [speech-technology     ] semantic_similarity       0.88  ok
+  [speech-technology     ] noise_sensitivity         0.62  ok
+
+wrote the full run to evaluation/results/2026-09-17-llm-selection/claude-sonnet-5/report.json
