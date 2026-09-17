@@ -30,3 +30,7 @@ env/
 # --- Coding ---
 /CLAUDE.md
 /system_architecture.md
+
+# setuptools artifacts from a non-editable `pip install .`
+build/
+dist/
