@@ -84,7 +84,13 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-exclude = [".venv", "data", "*.egg-info"]
+# extend-exclude, NOT exclude: plain `exclude` replaces ruff's defaults, which
+# include build/ and dist/. Cloud Build installs non-editable (pip install
+# ".[ci]"), so setuptools leaves a full copy of the tree in build/lib — and
+# linting that copy fails the layering rule, whose per-file-ignores are
+# anchored to real paths like "serving/**". Local and GitHub runs never hit
+# this because requirements.txt installs editable.
+extend-exclude = [".venv", "data", "*.egg-info"]
 
 [tool.ruff.lint]
 # TID251 (banned-api) only, NOT TID252: relative imports within a package are
