@@ -1,0 +1,143 @@
+{
+  "_comment": [
+    "Synthetic source records that exercise every chunk-rendering branch:",
+    "all profile sections, all weblinks section types, list vs string bodies,",
+    "missing title, unicode, empty/absent sections, and a no-slug record.",
+    "chunk_golden.json is the output the ingest chunker produces from these.",
+    "Both files exist so a refactor of the chunking/source layer can prove it is",
+    "byte-identical -- identical text means identical content_hash, which means",
+    "no re-embedding and no re-ingest."
+  ],
+  "profiles": [
+    {
+      "slug": "jane-doe",
+      "url": "https://www.khoury.northeastern.edu/people/jane-doe/",
+      "name": "Jane Doe",
+      "title": "Associate Professor",
+      "roles": ["Tenured/Tenure-Track Faculty"],
+      "campuses": ["Boston"],
+      "areas_of_interest": ["Programming Languages", "Type Systems"],
+      "biography": "Jane Doe studies type systems and compilers.",
+      "research_interests": ["Programming languages", "Compilers"],
+      "education": ["PhD in Computer Science, MIT"],
+      "labs_and_groups": ["Programming Research Lab"],
+      "projects": ["Typed IR for gradual typing"]
+    },
+    {
+      "slug": "ravi-krishnan",
+      "url": "https://www.khoury.northeastern.edu/people/ravi-krishnan/",
+      "name": "Ravi Krishnan",
+      "title": "",
+      "roles": [],
+      "campuses": ["Vancouver", "Boston"],
+      "areas_of_interest": [],
+      "biography": "Works on distributed systems.",
+      "research_interests": [],
+      "education": [],
+      "labs_and_groups": [],
+      "projects": []
+    },
+    {
+      "slug": "amelie-rousseau",
+      "url": "https://www.khoury.northeastern.edu/people/amelie-rousseau/",
+      "name": "Amélie Rousseau",
+      "title": "Assistant Teaching Professor",
+      "roles": ["Teaching Faculty"],
+      "campuses": ["Oakland"],
+      "areas_of_interest": ["Human–Computer Interaction"],
+      "biography": "Amélie Rousseau — research on accessibility and café-based fieldwork.",
+      "research_interests": ["Accessibility"],
+      "education": [],
+      "labs_and_groups": [],
+      "projects": []
+    },
+    {
+      "slug": "no-content-person",
+      "url": "https://www.khoury.northeastern.edu/people/no-content-person/",
+      "name": "No Content",
+      "title": "Staff",
+      "roles": [],
+      "campuses": [],
+      "areas_of_interest": [],
+      "biography": "",
+      "research_interests": [],
+      "education": ["BS in Something"],
+      "labs_and_groups": [],
+      "projects": []
+    },
+    {
+      "name": "Missing Slug",
+      "title": "Prof",
+      "biography": "Should produce no chunks at all."
+    }
+  ],
+  "weblinks": [
+    {
+      "slug": "jane-doe",
+      "professor_name": "Jane Doe",
+      "professor_title": "Associate Professor",
+      "source_url": "https://jane.example/",
+      "schema_version": "v1",
+      "page_hash": "sha256:deadbeef",
+      "sections": [
+        {
+          "section_type": "website_summary",
+          "text": "Jane's group builds type systems for gradual typing.",
+          "source_url": "https://jane.example/"
+        },
+        {
+          "section_type": "current_projects",
+          "text": ["Typed IR", "Gradual contracts"],
+          "source_url": "https://jane.example/research/"
+        },
+        {
+          "section_type": "recent_publications",
+          "text": ["Gradual Types Revisited (2025)", "Contracts at Scale (2024)"],
+          "source_url": "https://jane.example/pubs/"
+        },
+        {
+          "section_type": "students_or_lab_members",
+          "text": ["Alice Chen", "Bob Ortiz"],
+          "source_url": "https://jane.example/people/"
+        },
+        {
+          "section_type": "recent_news",
+          "text": ["2025-04: paper accepted at POPL"],
+          "source_url": "https://jane.example/news/"
+        }
+      ]
+    },
+    {
+      "slug": "ravi-krishnan",
+      "professor_name": "",
+      "sections": [
+        {
+          "section_type": "website_summary",
+          "text": "Distributed systems research.",
+          "source_url": ""
+        },
+        {
+          "section_type": "recent_news",
+          "text": [],
+          "source_url": "https://ravi.example/"
+        },
+        {
+          "section_type": "current_projects",
+          "text": "",
+          "source_url": "https://ravi.example/"
+        },
+        {
+          "section_type": "unknown_future_section",
+          "text": ["Should fall back to a title-cased label"],
+          "source_url": "https://ravi.example/"
+        }
+      ]
+    },
+    {
+      "professor_name": "No Slug",
+      "sections": [
+        {"section_type": "website_summary", "text": "ignored", "source_url": "u"}
+      ]
+    }
+  ]
+}

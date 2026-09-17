@@ -1,0 +1,23 @@
+# Golden questions for retrieval/answer evaluation. One JSON object per line;
+# blank lines and #-comments are ignored.
+#
+#   id                 stable identifier, used in the miss report
+#   question           what a user would actually type
+#   expected_slugs     professor slug(s) a good answer should draw on (ANY = hit)
+#   expected_sections  optional: section types the evidence should come from
+#   notes              why this case exists / what it is probing
+#
+# THIS IS A SEED SET, not a finished benchmark. These entries were written
+# against profiles verifiable in the local sample; the live index holds ~800
+# people, so expand this to ~30 cases against the real corpus before treating
+# the numbers as a quality bar. A miss can also mean the question is ambiguous
+# rather than that retrieval is broken -- read the miss report, don't just watch
+# the percentage.
+{"id": "crypto-1", "question": "Who at Khoury works on cryptography?", "expected_slugs": ["abhi-shelat"], "expected_sections": ["research_interests", "biography"], "notes": "Direct research-interest match on a single strong signal."}
+{"id": "crypto-2", "question": "I'm looking for a professor doing research in applied security and secure computation.", "expected_slugs": ["abhi-shelat"], "notes": "Paraphrase: no exact term overlap with the profile wording."}
+{"id": "wireless-sec-1", "question": "Which faculty study security of wireless and cyber-physical systems?", "expected_slugs": ["aanjhan-ranganathan"], "expected_sections": ["research_interests"], "notes": "Multi-term interest; checks the areas/research sections are reachable."}
+{"id": "iot-1", "question": "Who researches embedded and IoT systems security?", "expected_slugs": ["aanjhan-ranganathan"], "notes": "Narrower phrasing of the same person's interests."}
+{"id": "speech-1", "question": "Is anyone working on speech recognition?", "expected_slugs": ["aanchan-mohan"], "expected_sections": ["research_interests"], "notes": "Short, conversational phrasing."}
+{"id": "nlp-1", "question": "Which professors work on natural language processing and machine learning?", "expected_slugs": ["aanchan-mohan"], "notes": "Broad area; the live corpus has many valid answers, so treat a miss here as a signal to widen expected_slugs rather than a regression."}
+{"id": "health-informatics-1", "question": "Who works in personal health informatics?", "expected_slugs": ["aarti-sathyanarayana"], "expected_sections": ["areas_of_interest"], "notes": "Evidence lives in areas_of_interest, not biography -- exercises that section."}
+{"id": "teaching-faculty-1", "question": "Which teaching professors focus on machine learning?", "expected_slugs": ["aanchan-mohan"], "notes": "Blends a role filter with a topic; role lives in metadata, not chunk text, so this is expected to be hard until metadata filtering is used."}

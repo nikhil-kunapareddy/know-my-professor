@@ -1,37 +1,77 @@
 # tests/
 
-Offline unit tests for the pure logic in `core/`, `preprocessing/`, and `shared/`.
+Offline unit tests for `core/`, `preprocessing/`, `shared/`, `serving/`, and
+`evaluation/`.
 
 ```bash
 .venv/bin/python -m pytest tests/ -q       # all
-.venv/bin/python -m pytest tests/test_weblinks.py -q
+.venv/bin/python -m pytest tests/test_api.py -q
+.venv/bin/ruff check .                     # lint + import-layering rules
 ```
 
-No network, GCS, Gemini, or Pinecone access — everything runs offline.
+No network, GCS, Gemini, Pinecone, or model access — everything runs offline.
+These run on every PR into `dev`/`main` and again in Cloud Build before either
+Service image is built.
 
 ## How it works (see `conftest.py`)
 
-The source is a normal package now. `pyproject.toml` sets `pythonpath = ["."]`,
-so tests import it directly (`from preprocessing.ingest.chunking import Chunker`).
-The old flat-import shim is gone.
+`pyproject.toml` sets `pythonpath = ["."]`, so tests import the package directly
+(`from preprocessing.sources.registry import SOURCES`).
 
-`conftest.py` only installs lightweight stubs for cloud libs that may be missing
-in a bare environment (`pinecone`, `mistralai`, `trafilatura`,
-`google.generativeai`, `google.cloud.storage`). When the real libraries are
-present (e.g. in `.venv`) the stubs are skipped. Tests never call the stubbed
-APIs — they exercise parsing, chunking, hashing, crawling, and the pipeline
-orchestration, not live I/O.
+`conftest.py` installs lightweight stubs for cloud libs that may be missing in a
+bare environment (`pinecone`, `mistralai`, `trafilatura`, `google.generativeai`,
+`google.cloud.storage`). Where the real libraries are present they are used.
+Tests never call a live API — providers are injected as fakes.
 
 ## Coverage
 
 - `test_scraper.py` — `ProfileParser.parse` (header/aside/accordion),
   `DirectoryFetcher.extract_total_pages` / `extract_profile_urls`.
-- `test_ingest.py` — `Chunker` content-hash + `enrichment_to_chunks` (source-url,
-  disjoint ids, empty-drop), `PineconeStore.fetch_existing_hashes` (batching,
-  dedup), and the "same hash skips / changed hash re-embeds" rule.
-- `test_weblinks.py` — `SiteCrawler` one-hop link selection + fetch encoding,
-  `Extractor` success guard / `page_hash` (determinism + `SCHEMA_VERSION`
-  sensitivity) / `clean_pages`, `WeblinksCrawlJob.website_url` / `build_record`.
-- `test_core.py` — `RAGPipeline` orchestration (ordered sources, no-match
-  short-circuit, empty-answer fallback) and `PromptBuilder` numbering, with fakes.
-- `test_e2e_live.py` — opt-in (`KMP_LIVE_E2E=1`); hits the real APIs + index.
+- `test_ingest.py` — per-source chunk rendering, registry invariants (duplicate
+  section keys / prefixes rejected), `_collect_chunks` over the registry
+  (entity scoping, `--limit` semantics, stale-enrichment skip), and
+  `PineconeStore.fetch_existing_hashes` batching + the re-embed rule.
+- `test_chunk_golden.py` — **the re-ingest guard.** Pins chunk text and metadata
+  byte-for-byte against `fixtures/chunk_golden.json`. Chunk text is hashed into
+  `content_hash`, which decides whether ingest re-embeds, so any rendering change
+  silently invalidates the index. If this fails, either the change was
+  unintended, or it was intended and the index owes you a full re-ingest.
+- `test_providers.py` — embedder/generator registries, the dimension guard, the
+  shared backoff policy, and that query embedding reuses the document path.
+- `test_core.py` — `RAGPipeline` orchestration: ordered sources, score floor,
+  filter pass-through, stage timings, no-match and empty-answer fallbacks.
+- `test_api.py` — routing (`/v1/chat` + legacy `/chat`), health/readiness,
+  citation filtering, error-status mapping, and that upstream error text never
+  reaches the client.
+- `test_frontend.py` — `ChatClient` transport (timeout, retry policy, error
+  translation, schema validation) and citation formatting.
+- `test_settings.py` — env parsing/validation and the Pinecone dimension guard.
+- `test_weblinks.py` — `SiteCrawler` one-hop selection + fetch encoding,
+  `Extractor` guard/`page_hash`/`clean_pages`, and that the Gemini extraction
+  schema matches the source's declared section keys.
+- `test_eval.py` — evaluation scoring (recall@k, MRR, citation precision) and
+  golden-file parsing.
+- `test_e2e_live.py` — opt-in (`KMP_LIVE_E2E=1`); drives the real pipeline
+  against the live index.
+
+## Regenerating the chunk golden file
+
+Only when a rendering change is intentional — and it means a full re-ingest:
+
+```bash
+.venv/bin/python - <<'PY'
+import json, pathlib
+from preprocessing.sources.registry import chunks_for, get_source
+fx = json.loads(pathlib.Path("tests/fixtures/source_records.json").read_text())
+dump = lambda cs: [{"vector_id": c.vector_id, "text": c.text, "metadata": c.metadata} for c in cs]
+golden = {
+    "profiles": [{"slug": r.get("slug"),
+                  "is_substantive": get_source("profiles").is_ingestable(r),
+                  "chunks": dump(chunks_for("profiles", r))} for r in fx["profiles"]],
+    "weblinks": [{"slug": r.get("slug"),
+                  "chunks": dump(chunks_for("weblinks", r))} for r in fx["weblinks"]],
+}
+pathlib.Path("tests/fixtures/chunk_golden.json").write_text(
+    json.dumps(golden, indent=2, ensure_ascii=False, sort_keys=True) + "\n")
+PY
+```

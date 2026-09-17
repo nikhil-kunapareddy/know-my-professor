@@ -1,16 +1,28 @@
-"""Streamlit chat UI for Know My Professor. Talks to the /chat API."""
+"""Streamlit chat UI for Know My Professor.
+
+Wiring only: the transport lives in api_client.py and the rendering in views.py,
+so both are testable without running Streamlit.
+"""
 
 from __future__ import annotations
 
 import os
 
-import requests
 import streamlit as st
+
+from serving.frontend.api_client import ChatClient, ChatError
+from serving.frontend.views import render_citations, render_error
 
 API_URL = os.environ.get(
     "KMP_API_URL", "https://kmp-api-309233821309.us-central1.run.app"
-).rstrip("/")
-REQUEST_TIMEOUT_SECONDS = 60
+)
+
+
+@st.cache_resource
+def get_client() -> ChatClient:
+    """One client (and one connection pool) for the whole session."""
+    return ChatClient(base_url=API_URL)
+
 
 st.set_page_config(page_title="Know My Professor")
 st.title("Know My Professor")
@@ -19,21 +31,12 @@ st.caption("Ask about Northeastern Khoury faculty.")
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-
-def render_citations(citations: list[dict]) -> None:
-    if not citations:
-        return
-    with st.expander(f"Sources ({len(citations)})"):
-        for c in citations:
-            st.markdown(
-                f"**[{c['number']}] {c['professor_name']}** — {c['professor_title']}  \n"
-                f"{c['section_type']} · [profile]({c['url']}) · score {c['score']:.2f}"
-            )
-
-
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+        if msg.get("error"):
+            render_error(msg["content"], msg.get("request_id", ""))
+        else:
+            st.markdown(msg["content"])
         if msg["role"] == "assistant":
             render_citations(msg.get("citations", []))
 
@@ -45,22 +48,21 @@ if question := st.chat_input("Ask a question about Khoury faculty..."):
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             try:
-                response = requests.post(
-                    f"{API_URL}/chat",
-                    json={"question": question},
-                    timeout=REQUEST_TIMEOUT_SECONDS,
-                )
-                response.raise_for_status()
-                data = response.json()
-                answer = data.get("answer", "")
-                citations = data.get("citations", [])
-            except requests.RequestException as e:
-                answer = f"Error contacting API: {e}"
-                citations = []
-
-        st.markdown(answer)
-        render_citations(citations)
-
-    st.session_state.messages.append(
-        {"role": "assistant", "content": answer, "citations": citations}
-    )
+                response = get_client().ask(question)
+            except ChatError as e:
+                render_error(e.message, e.request_id)
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": e.message,
+                    "error": True,
+                    "request_id": e.request_id,
+                    "citations": [],
+                })
+            else:
+                st.markdown(response.answer)
+                render_citations(response.citations)
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": response.answer,
+                    "citations": response.citations,
+                })

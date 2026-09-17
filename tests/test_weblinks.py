@@ -8,7 +8,6 @@ from preprocessing.sources.weblinks.crawl import SiteCrawler
 from preprocessing.sources.weblinks.extract import Extractor
 from preprocessing.sources.weblinks.runner import WeblinksCrawlJob
 
-
 # --- crawl: one-hop link selection ----------------------------------------
 
 
@@ -86,7 +85,7 @@ def test_fetch_reports_http_and_non_html():
 
 
 def test_extraction_succeeded_threshold():
-    from shared.config import MIN_CLEAN_TEXT_CHARS
+    from preprocessing.sources.weblinks.config import MIN_CLEAN_TEXT_CHARS
 
     assert not Extractor.extraction_succeeded(" " * (MIN_CLEAN_TEXT_CHARS - 1))
     assert Extractor.extraction_succeeded("x" * MIN_CLEAN_TEXT_CHARS)
@@ -114,7 +113,7 @@ def test_clean_pages_sorts_by_url_and_labels(monkeypatch):
 
 
 def test_clean_pages_truncates(monkeypatch):
-    from shared.config import MAX_CLEAN_TEXT_CHARS
+    from preprocessing.sources.weblinks.config import MAX_CLEAN_TEXT_CHARS
 
     monkeypatch.setattr(extract_mod.trafilatura, "extract", lambda html, **kw: html)
     pages = [("https://a.example/", "x" * (MAX_CLEAN_TEXT_CHARS + 5000))]
@@ -131,6 +130,15 @@ def test_website_url_picks_first_http_link():
     ) == "https://b/"
     assert WeblinksCrawlJob.website_url({"websites": []}) is None
     assert WeblinksCrawlJob.website_url({}) is None
+
+
+def test_extraction_schema_matches_the_sources_section_keys():
+    """What Gemini is asked for must be exactly what the source can chunk."""
+    from preprocessing.sources.weblinks.config import EXTRACTION_SCHEMA, SECTION_TYPES
+    from preprocessing.sources.weblinks.source import WEBLINKS_SECTIONS
+
+    assert set(EXTRACTION_SCHEMA["properties"]) == {s.key for s in WEBLINKS_SECTIONS}
+    assert SECTION_TYPES == [s.key for s in WEBLINKS_SECTIONS]
 
 
 def test_build_record_drops_empties_and_stamps_metadata():

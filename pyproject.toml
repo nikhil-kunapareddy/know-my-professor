@@ -11,7 +11,19 @@ requires-python = ">=3.11"
 # One package, five deployables. Each Cloud Run unit installs ONLY its extra so
 # its image stays lean (the scraper image never pulls fastapi/llama, etc.).
 # The deploy/Dockerfile selects the extra via `pip install ".[${COMPONENT}]"`.
+#
+# Provider SDKs are their own groups, composed into the deployables below, so
+# adding a model provider is one new group plus one reference — not an edit to
+# every image that happens to talk to a model.
 [project.optional-dependencies]
+
+# --- provider SDK groups ---------------------------------------------------
+embed-mistral = ["mistralai==1.9.10"]
+chat-anthropic = ["anthropic==1.6.0"]
+chat-llama = ["llama-api-client==0.6.0"]
+extract-gemini = ["google-generativeai==0.8.3"]
+
+# --- deployables -----------------------------------------------------------
 profiles = [
     "requests==2.32.3",
     "beautifulsoup4==4.12.3",
@@ -20,28 +32,45 @@ profiles = [
 weblinks = [
     "requests==2.32.3",
     "beautifulsoup4==4.12.3",
-    "trafilatura",
-    "google-generativeai",
+    "trafilatura==2.1.0",
     "google-cloud-storage==2.18.2",
+    "know-my-professor[extract-gemini]",
 ]
 ingest = [
     "google-cloud-storage==2.18.2",
-    "mistralai==1.9.10",
     "pinecone==5.4.2",
+    "know-my-professor[embed-mistral]",
 ]
 api = [
-    "fastapi==0.115.5",
+    # fastapi >=0.118 so its starlette range overlaps streamlit's. The two never
+    # share an image, but the dev install (requirements.txt) pulls both, and the
+    # older pin resolved to a starlette that streamlit could not import.
+    "fastapi==0.141.1",
     "uvicorn[standard]==0.32.1",
-    "llama-api-client==0.6.0",
-    "mistralai==1.9.10",
     "pinecone==5.4.2",
     "pydantic==2.10.3",
+    # Both chat SDKs ship in the api image so CHAT_PROVIDER can be flipped
+    # with an env var instead of a rebuild.
+    "know-my-professor[embed-mistral,chat-anthropic,chat-llama]",
 ]
 frontend = [
-    "streamlit",
+    "streamlit==1.58.0",
     "requests==2.32.3",
+    # shared/schemas.py is the wire contract both ends parse against.
+    "pydantic==2.10.3",
 ]
-dev = ["pytest"]
+dev = ["pytest", "ruff"]
+
+# Exactly what the offline suite needs, and nothing more. Cloud Build installs
+# this before building an image, so the deploy gate stays fast: it skips the
+# frontend extra (streamlit drags in pandas/pyarrow/numpy) because no test
+# imports streamlit — the UI's pure logic lives in serving/frontend/formatting.py.
+# GitHub Actions installs the FULL set instead, so cross-extra conflicts still
+# get caught on PRs.
+ci = [
+    "know-my-professor[api,profiles,weblinks,ingest,dev]",
+    "httpx",  # required by fastapi's TestClient
+]
 
 [tool.setuptools.packages.find]
 include = ["core*", "preprocessing*", "shared*", "serving*"]
@@ -51,3 +80,31 @@ include = ["core*", "preprocessing*", "shared*", "serving*"]
 # (replaces the old conftest flat-import shim).
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [".venv", "data", "*.egg-info"]
+
+[tool.ruff.lint]
+# TID251 (banned-api) only, NOT TID252: relative imports within a package are
+# the house style here, deliberately.
+select = ["E", "F", "I", "B", "UP", "TID251"]
+ignore = [
+    "E501",  # long lines are handled by the formatter, not enforced here
+    "B008",  # FastAPI's Depends(...) in defaults is idiomatic
+]
+
+# The restructure's whole point was one-way dependencies. Without a rule the
+# layering erodes silently, so make the import direction a lint error:
+#   serving -> core -> shared        preprocessing -> shared
+# core must never import serving or preprocessing; shared must import neither.
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"serving".msg = "core/preprocessing/shared must not import from serving."
+"preprocessing".msg = "core and shared must not import from preprocessing."
+
+[tool.ruff.lint.per-file-ignores]
+"serving/**" = ["TID251"]
+"preprocessing/**" = ["TID251"]
+"tests/**" = ["TID251"]
+"entrypoint.py" = ["TID251"]

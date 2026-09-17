@@ -14,7 +14,9 @@ import google.generativeai as genai
 import trafilatura
 from google.api_core.exceptions import ResourceExhausted
 
-from shared.config import (
+from shared.retry import with_backoff
+
+from .config import (
     EXTRACTION_PROMPT,
     EXTRACTION_SCHEMA,
     GEMINI_MAX_RETRIES,
@@ -57,7 +59,7 @@ class Extractor:
     def page_hash(clean_text: str) -> str:
         """Fingerprint of a site, mixing in SCHEMA_VERSION so a schema/prompt
         change forces re-extraction even when the page text is unchanged."""
-        payload = f"{SCHEMA_VERSION}\n{clean_text}".encode("utf-8")
+        payload = f"{SCHEMA_VERSION}\n{clean_text}".encode()
         return "sha256:" + hashlib.sha256(payload).hexdigest()[:32]
 
     def extract_structured(self, clean_text: str) -> dict:
@@ -70,19 +72,12 @@ class Extractor:
         }
         prompt = EXTRACTION_PROMPT + clean_text
 
-        delay = 2.0
-        for attempt in range(1, GEMINI_MAX_RETRIES + 1):
-            try:
-                resp = model.generate_content(prompt, generation_config=generation_config)
-                break
-            except ResourceExhausted:
-                if attempt == GEMINI_MAX_RETRIES:
-                    raise
-                print(f"    rate-limited (attempt {attempt}/{GEMINI_MAX_RETRIES}); sleeping {delay:.1f}s")
-                time.sleep(delay)
-                delay = min(delay * 2, 60.0)
-        else:  # pragma: no cover
-            raise RuntimeError("unreachable")
+        resp = with_backoff(
+            lambda: model.generate_content(prompt, generation_config=generation_config),
+            is_retryable=lambda e: isinstance(e, ResourceExhausted),
+            max_attempts=GEMINI_MAX_RETRIES,
+            label="gemini extract",
+        )
 
         time.sleep(GEMINI_RATE_LIMIT_SLEEP_SECONDS)
         try:

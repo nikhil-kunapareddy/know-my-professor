@@ -10,6 +10,19 @@
 # the --image deploy below preserves them (and the runtime SA) on later builds.
 
 steps:
+  # Gate: lint + offline tests, same as the Service builds. A Job that crashes
+  # on a monthly cron is discovered late, so it is worth the minute here.
+  - name: python:3.12-slim
+    id: test
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        pip install --no-cache-dir --quiet ".[ci]"
+        ruff check .
+        pytest tests/ -q
+
   - name: gcr.io/cloud-builders/docker
     args:
       - build

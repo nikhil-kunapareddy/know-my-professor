@@ -8,7 +8,7 @@ import time
 import requests
 from bs4 import BeautifulSoup
 
-from shared.config import (
+from .config import (
     KHOURY_LISTING,
     PROFILE_URL_RE,
     SCRAPER_REQUEST_DELAY_SECONDS,
