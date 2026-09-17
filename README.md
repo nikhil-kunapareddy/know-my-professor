@@ -1,87 +1,99 @@
 # Know My Professor
 
-A RAG chatbot over [Northeastern Khoury](https://www.khoury.northeastern.edu/people/)
-faculty profiles. Ask *"who at Khoury works on programming languages?"* and get
-cited answers.
+Ask a question about Northeastern's Khoury College faculty and get an answer
+with citations, drawn from ~870 real faculty profiles.
 
-- **Website:** https://kmp-frontend-309233821309.us-central1.run.app
-- **API:** https://kmp-api-309233821309.us-central1.run.app
+**[Try it →](https://kmp-frontend-309233821309.us-central1.run.app)**
 
-## Architecture
+---
+
+> **Who at Khoury works on cryptography?**
+>
+> Several Khoury faculty work on cryptography:
+>
+> - **Daniel Wichs** — all aspects of modern cryptography, including homomorphic
+>   encryption and outsourcing computation to the cloud **[2]**
+> - **Zhengzhong Jin** — proof systems for delegating computation, with
+>   blockchain applications **[3]**
+> - **Cody Freitag** — cryptographic proof systems, blockchains, and quantum
+>   threats to cryptographic protocols **[1]**
+> - **Joshua Gancher** — cryptographic software and formal verification **[4]**
+>
+> *Sources: [1] Cody Freitag — biography · [2] Daniel Wichs — biography · …*
+
+Every claim is numbered, and every number resolves to the profile section it
+came from. If the corpus can't answer, it says so instead of guessing.
+
+---
+
+## How it works
 
 ```
-scrape Khoury directory ──► gs://know-my-professor-raw/profiles/{slug}.json
-crawl faculty sites + Gemini extract ──► .../weblinks/{slug}.json
-ingest: chunk + Mistral embed (1024d) ──► Pinecone (know-my-professor-m1024)
+Khoury directory ──scrape──►  profile JSON  ──┐
+                                              ├──► chunk ──► embed ──► Pinecone
+faculty websites ──crawl──►  extracted JSON ──┘                         (1024-d)
 
-User ─► Streamlit ─► /chat API:  Mistral query embed ─► Pinecone top-K
-                                 ─► Claude Opus 5 ─► answer + citations
+                                    ┌──────────────────────────────┐
+your question ──► embed ──► search ─┤ top 8 matching profile chunks├──► Claude
+                                    └──────────────────────────────┘      │
+                                                     cited answer ◄────────┘
 ```
 
-Three Cloud Run **Jobs** (scrape, weblinks, ingest) run on monthly crons; two
-Cloud Run **Services** (api, frontend) auto-deploy from `main` via Cloud Build.
+One chunk per section — six from the directory profile (biography, research
+interests, education, areas of interest, labs, projects) and five more extracted
+from the professor's own website (summary, current projects, recent
+publications, lab members, news). A citation therefore points at a specific
+claim, not a whole page.
 
-## Repo layout
+## Stack
 
-```
-core/           RAG brain — pipeline · retrieval (Retriever ABC) · llm (Generator ABC + registry)
-preprocessing/  sources/ (Source ABC + registry: profiles, weblinks) · ingest/
-shared/         config · settings (env) · schemas (wire contract) · embeddings (Embedder ABC
-                + registry) · retry · gcs
-serving/        api/ (FastAPI, versioned /v1/chat) · frontend/ (Streamlit + api_client)
-evaluation/     60-case golden set (53 answerable + 7 no-answer) · recall@k / MRR /
-                citation scoring · Ragas harness judging retrieval, generation, and
-                end-to-end separately · results/ holds stored runs and their plots
-deploy/         one Dockerfile (--build-arg COMPONENT) + Cloud Build configs
-tests/          offline pytest + opt-in live e2e
-```
+| | |
+|---|---|
+| **Embeddings** | Mistral `mistral-embed-2312` (1024-d) |
+| **Vector search** | Pinecone serverless, cosine |
+| **Generation** | Claude Opus 5 |
+| **Extraction** | Gemini 3.1 Flash Lite, for faculty websites |
+| **Serving** | FastAPI + Streamlit on Cloud Run |
+| **Refresh** | three monthly jobs: scrape → enrich → ingest |
 
-One installable package; five deployables built from the single `deploy/Dockerfile`.
+Everything runs inside free tiers.
 
-### Extension points
-
-Both axes are registry-driven, so adding one is a new module plus one line:
-
-| To add | Write | Register in |
-| --- | --- | --- |
-| An embedding provider | `Embedder` subclass in `shared/embeddings/` | `_EMBEDDERS` in `shared/embeddings/__init__.py` |
-| A chat provider | `Generator` subclass in `core/llm/` | `_GENERATORS` in `core/llm/__init__.py` |
-| A data source (e.g. courses) | `Source` subclass in `preprocessing/sources/<name>/` | `SOURCES` in `preprocessing/sources/registry.py` |
-
-Ingest names no source and the API names no provider, so neither has to change.
-Registries validate their invariants at import: section keys must be unique
-across sources (a collision would silently overwrite vectors in Pinecone), and
-an embedder's dimension must match the index it will write to.
-
-Note that a new **data source** is additive, but a new **embedding provider**
-with a different vector width needs a new Pinecone index and a full re-ingest —
-`build_embedder` refuses to start rather than fail part-way through an upsert.
-
-## Local setup
+## Run it locally
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt        # installs all component extras (editable)
-python -m pytest tests/ -q             # offline tests
-ruff check .                           # lint + import-layering rules
-python -m preprocessing.sources.profiles.runner --limit 5   # run a stage locally
-python -m evaluation.run_eval          # retrieval quality vs. the golden set (live)
-python -m evaluation.run_ragas --stage retrieval   # judged quality (needs .[eval])
+pip install -r requirements.txt
+streamlit run serving/frontend/app.py    # talks to the live API — no keys needed
+pytest tests/ -q                         # offline test suite — no keys needed
 ```
 
-Lint and tests run on every PR into `dev`/`main` (`.github/workflows/test.yml`)
-and again in Cloud Build before either Service image is built, so a red commit
-cannot deploy.
+To run the backend yourself, put `MISTRAL_API_KEY`, `PINECONE_API_KEY` and
+`ANTHROPIC_API_KEY` in a `.env` at the repo root.
 
-Secrets live in repo-root `.env` (gitignored): `MISTRAL_API_KEY`,
-`PINECONE_API_KEY`, `ANTHROPIC_API_KEY`, `LLAMA_API_KEY`, `GEMINI_API_KEY`. In Cloud Run these are env
-vars on the service/job, never committed.
+## A few decisions worth explaining
 
-## Stack & constraints
+**Queries and documents can't drift apart.** `embed_query()` calls the same
+`embed_texts()` that ingest uses — one code path, so the two vector spaces are
+the same by construction rather than by convention.
 
-- **Embeddings:** Mistral `mistral-embed-2312` (1024-dim, batched). **Generation:**
-  Claude Opus 5 (Anthropic); Llama-4-Maverick stays registered as a fallback,
-  selectable with `CHAT_PROVIDER=llama`. **Vectors:** Pinecone serverless,
-  cosine, vector ID `{slug}#{section_type}`.
-- **GCP only**, **zero cost** (everything inside free tiers), **production-level**
-  (least-privilege service accounts, idempotent scrape, monthly refresh crons).
+**Adding a provider or a data source is one line.** Embedders, chat models, and
+data sources are registries; ingest names no source and the API names no
+provider, so neither changes when you add one.
+
+**Mistakes fail loudly and early.** A chunk's text is hashed, so ingest
+re-embeds only what changed; an embedder whose dimension doesn't match the index
+refuses to start rather than failing halfway through an upsert.
+
+**Answers are measured, not trusted.** A golden question set scores retrieval
+and citations on every change, so "does this feel better?" becomes a number.
+
+## Layout
+
+```
+core/           the RAG pipeline: retrieve → score → generate
+preprocessing/  scrapers, website extraction, chunking, ingest
+shared/         config, settings, embeddings, the API contract
+serving/        FastAPI backend · Streamlit frontend
+evaluation/     golden questions + scoring
+tests/          offline test suite
+deploy/         one Dockerfile → three jobs + two services
+```
