@@ -29,7 +29,9 @@ preprocessing/  sources/ (Source ABC + registry: profiles, weblinks) · ingest/
 shared/         config · settings (env) · schemas (wire contract) · embeddings (Embedder ABC
                 + registry) · retry · gcs
 serving/        api/ (FastAPI, versioned /v1/chat) · frontend/ (Streamlit + api_client)
-evaluation/     golden question set + recall@k / MRR / citation scoring
+evaluation/     60-case golden set (53 answerable + 7 no-answer) · recall@k / MRR /
+                citation scoring · Ragas harness judging retrieval, generation, and
+                end-to-end separately · results/ holds stored runs and their plots
 deploy/         one Dockerfile (--build-arg COMPONENT) + Cloud Build configs
 tests/          offline pytest + opt-in live e2e
 ```
@@ -64,6 +66,7 @@ python -m pytest tests/ -q             # offline tests
 ruff check .                           # lint + import-layering rules
 python -m preprocessing.sources.profiles.runner --limit 5   # run a stage locally
 python -m evaluation.run_eval          # retrieval quality vs. the golden set (live)
+python -m evaluation.run_ragas --stage retrieval   # judged quality (needs .[eval])
 ```
 
 Lint and tests run on every PR into `dev`/`main` (`.github/workflows/test.yml`)

@@ -5,3 +5,7 @@
 # one extra per Cloud Run deployable. Deployment installs only the relevant extra
 # (see deploy/Dockerfile: pip install ".[${COMPONENT}]").
 -e .[profiles,weblinks,ingest,api,frontend,dev]
+
+# The `eval` extra (ragas) is deliberately NOT here: it pulls ~50 packages for
+# one opt-in tool, and GitHub Actions installs this file on every PR. Get it
+# with `pip install -e ".[eval]"` — see evaluation/README.md.
