@@ -42,7 +42,7 @@ and skip instead. 52 of the 68 tests in `test_deepeval_eval.py` run without it.
   entity ids through the same `sources/entities.py` helper: if they disagreed,
   a College of Science professor's website would enrich the Khoury professor
   with the same slug.
-- `test_courses.py` — the course corpus: catalog parsing (title/credits/requisites,
+- `test_courses.py` — the course corpus (catalog + term schedule): catalog parsing (title/credits/requisites,
   non-breaking spaces, unreadable blocks), entity ids that cannot collide with
   professor slugs, and the **namespace** rules — that both course sources share
   one namespace, that people stay in the default one, that the registry rejects a

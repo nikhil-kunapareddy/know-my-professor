@@ -49,7 +49,7 @@ courses = [
     "google-cloud-storage==2.18.2",
 ]
 # Banner returns JSON, so no HTML parser is needed here.
-sections = [
+schedule = [
     "requests==2.32.3",
     "google-cloud-storage==2.18.2",
 ]
@@ -101,7 +101,7 @@ eval = [
 # GitHub Actions installs the FULL set instead, so cross-extra conflicts still
 # get caught on PRs.
 ci = [
-    "know-my-professor[api,profiles,weblinks,courses,sections,ingest,dev]",
+    "know-my-professor[api,profiles,weblinks,courses,schedule,ingest,dev]",
     "httpx",  # required by fastapi's TestClient
 ]
 

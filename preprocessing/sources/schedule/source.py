@@ -1,4 +1,9 @@
-"""The class-schedule source: Banner JSON -> who teaches each course.
+"""The term-schedule source: Banner JSON -> who teaches each course, per term.
+
+Named for the term, not for Banner's "sections": ``sections`` already means the
+chunk taxonomy in this codebase (``Source.sections``, ``section_type`` on every
+chunk), and a ``SectionSource.sections`` attribute holding SectionSpecs reads as
+nonsense.
 
 Enriches a course entity defined by ``preprocessing/sources/courses``, exactly
 as weblinks enrich a professor. It MUST mint entity ids the same way
@@ -22,17 +27,17 @@ from ..courses.source import COURSES_NAMESPACE, ENTITY_PREFIX
 
 #: One section type. Keys must stay disjoint from every other source's; the
 #: registry asserts that at import.
-SECTION_SECTIONS: tuple[SectionSpec, ...] = (
+SCHEDULE_SECTIONS: tuple[SectionSpec, ...] = (
     SectionSpec("course_instructors", "Instructors"),
 )
 
 
-class SectionSource(Source):
-    """Renders one ``sections/{slug}.json`` record into an instructors chunk."""
+class ScheduleSource(Source):
+    """Renders one ``schedule/{slug}.json`` record into an instructors chunk."""
 
-    name = "sections"
-    prefix = "sections/"
-    sections = SECTION_SECTIONS
+    name = "schedule"
+    prefix = "schedule/"
+    sections = SCHEDULE_SECTIONS
     depends_on_entities = True
     namespace = COURSES_NAMESPACE
 

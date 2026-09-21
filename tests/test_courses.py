@@ -12,9 +12,9 @@ import pytest
 
 from preprocessing.sources.courses.catalog import CatalogFetcher
 from preprocessing.sources.courses.source import COURSES_NAMESPACE, CourseSource
-from preprocessing.sources.sections.banner import BannerClient
-from preprocessing.sources.sections.runner import course_slug
-from preprocessing.sources.sections.source import SectionSource
+from preprocessing.sources.schedule.banner import BannerClient
+from preprocessing.sources.schedule.runner import course_slug
+from preprocessing.sources.schedule.source import ScheduleSource
 
 SUBJECT_HTML = """
 <html><body>
@@ -77,10 +77,10 @@ def test_course_entity_ids_are_prefixed_so_they_cannot_collide_with_people():
     assert CourseSource().entity_id({}) is None
 
 
-def test_sections_mint_the_same_entity_id_as_courses():
+def test_schedule_mints_the_same_entity_id_as_courses():
     """Enrichment must land on the course it describes, as weblinks do for people."""
     record = {"slug": "cs3800"}
-    assert SectionSource().entity_id(record) == CourseSource().entity_id(record)
+    assert ScheduleSource().entity_id(record) == CourseSource().entity_id(record)
 
 
 def test_course_slug_matches_banner_and_catalog_spellings():
@@ -96,7 +96,7 @@ def test_course_slug_matches_banner_and_catalog_spellings():
 
 def test_both_course_sources_share_one_namespace():
     """A course's description and its instructors must be retrievable together."""
-    assert CourseSource().namespace == SectionSource().namespace == COURSES_NAMESPACE
+    assert CourseSource().namespace == ScheduleSource().namespace == COURSES_NAMESPACE
 
 
 def test_people_stay_in_the_default_namespace():
@@ -185,7 +185,7 @@ def test_a_course_with_no_description_is_not_ingested():
 
 
 def test_a_course_staffed_entirely_TBA_is_not_ingested():
-    source = SectionSource()
+    source = ScheduleSource()
     assert not source.is_ingestable({"slug": "x", "terms": [{"instructors": []}]})
     assert source.is_ingestable({"slug": "x", "terms": [{"instructors": ["Jane Doe"]}]})
 
@@ -214,7 +214,7 @@ def test_instructor_chunk_names_the_term():
             {"code": "202730", "description": "Spring 2027 Semester", "instructors": ["John Roe"]},
         ],
     }
-    chunk = SectionSource().to_chunks(record)[0]
+    chunk = ScheduleSource().to_chunks(record)[0]
     assert "Fall 2026 Semester: Jane Doe" in chunk.text
     assert "Spring 2027 Semester: John Roe" in chunk.text
     assert chunk.metadata["instructors"] == ["Jane Doe", "John Roe"]
@@ -228,7 +228,7 @@ def test_instructor_chunk_drops_a_term_with_no_named_instructor():
             {"description": "Spring 2027 Semester", "instructors": []},
         ],
     }
-    text = SectionSource().to_chunks(record)[0].text
+    text = ScheduleSource().to_chunks(record)[0].text
     assert "Fall 2026" in text and "Spring 2027" not in text
 
 

@@ -17,7 +17,7 @@ from collections import Counter
 from .base import Chunk, Source
 from .courses.source import CourseSource
 from .profiles.source import ProfileSource
-from .sections.source import SectionSource
+from .schedule.source import ScheduleSource
 from .weblinks.source import WeblinksSource
 
 #: Order matters only in that entity-defining sources must be able to run
@@ -26,7 +26,7 @@ SOURCES: tuple[Source, ...] = (
     ProfileSource(),
     WeblinksSource(),
     CourseSource(),
-    SectionSource(),
+    ScheduleSource(),
 )
 
 

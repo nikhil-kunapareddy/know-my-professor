@@ -3,16 +3,16 @@ Banner class-schedule scraper (entrypoint).
 
 For every term Banner has not yet marked ``(View Only)``, collects each
 section's instructors and writes one JSON record per course to
-gs://<bucket>/sections/<slug>.json.
+gs://<bucket>/schedule/<slug>.json.
 
 Cost note: Banner returns an empty ``faculty`` list in bulk search results, so
 instructors need one request per SECTION (~9,700 for a full term). That is the
 whole run. Listing the sections themselves takes about twenty requests.
 
 Usage:
-    python -m preprocessing.sources.sections.runner --dry-run --subject CS
-    python -m preprocessing.sources.sections.runner --subject CS,MATH
-    python -m preprocessing.sources.sections.runner --gcs-bucket BUCKET
+    python -m preprocessing.sources.schedule.runner --dry-run --subject CS
+    python -m preprocessing.sources.schedule.runner --subject CS,MATH
+    python -m preprocessing.sources.schedule.runner --gcs-bucket BUCKET
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ from ..pacing import Pacer
 from ..profiles.config import LOCAL_OUTPUT_DIR
 from .banner import BannerClient
 from .config import DEFAULT_WORKERS, REQUEST_DELAY_SECONDS
-from .source import SectionSource
+from .source import ScheduleSource
 
 #: "CS3800" / "CS 3800" -> subject, number. Banner writes it unspaced.
 SUBJECT_COURSE_RE = re.compile(r"^([A-Z]{2,5})\s*(\d{3,4}[A-Z]?)$")
@@ -157,7 +157,7 @@ def main() -> None:
 
     store = _build_store(args.gcs_bucket)
     print(f"\nOutput store: {store.describe()}")
-    source = SectionSource()
+    source = ScheduleSource()
     written = skipped = 0
     for slug, record in sorted(merged.items()):
         if not source.is_ingestable(record):
