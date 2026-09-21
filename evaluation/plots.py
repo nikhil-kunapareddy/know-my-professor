@@ -1,6 +1,6 @@
 """Figures for a stored evaluation run.
 
-    python -m evaluation.plots evaluation/results/2026-09-17-sample10
+    python -m evaluation.plots evaluation/results/<run-dir>
 
 Reads the JSON a run wrote (``report.json``, or ``data.json`` for the two probe
 experiments) and writes PNGs beside it. Static images on purpose: these live in
@@ -14,9 +14,11 @@ sequential for magnitude), and the values are the validated defaults — checked
 with the palette validator rather than eyeballed. Two series is the most any
 figure here needs, and blue/orange clears every gate including contrast.
 
-One polarity note that the figures carry explicitly: ``noise_sensitivity`` is
-the only metric where lower is better, so it is marked with a down arrow
-wherever it appears beside the others.
+One polarity note that the figures carry explicitly: a metric where lower is
+better is marked with a down arrow wherever it appears beside the others.
+``INVERTED`` still lists ``noise_sensitivity`` even though the current metric
+table has no inverted metric — this module renders *stored* reports, and the
+runs recorded before the move from Ragas to DeepEval contain it.
 """
 
 from __future__ import annotations
@@ -57,6 +59,8 @@ BLUE_RAMP = ["#cde2fb", "#b7d3f6", "#9ec5f4", "#86b6ef", "#6da7ec",
 NEUTRAL = "#f0efec"
 
 STAGE_LABEL = {"retrieval": "RETRIEVAL", "generation": "GENERATION", "end_to_end": "END TO END"}
+#: Kept deliberately broader than the live metric table: see the module
+#: docstring. A metric named here that a report does not contain costs nothing.
 INVERTED = {"noise_sensitivity"}
 
 
@@ -87,10 +91,30 @@ def _save(fig, path: Path, title: str, subtitle: str = "") -> Path:
     if subtitle:
         fig.text(0.01, 1 - 0.58 / height, subtitle, ha="left", va="center",
                  fontsize=8.5, color=INK_SECONDARY)
+    # Headroom is reserved in inches for the same reason the offsets above are.
+    # Matplotlib's default top is a *fraction* (0.88), so a short figure puts
+    # the axes — and whatever is drawn at the top of it — straight through the
+    # subtitle. Dropping four metrics made every figure short enough to show it.
+    reserved = 0.95 if subtitle else 0.70
+    fig.subplots_adjust(top=min(fig.subplotpars.top, 1 - reserved / height))
     fig.savefig(path, dpi=200, facecolor=SURFACE, bbox_inches="tight", pad_inches=0.3)
     plt.close(fig)
     print(f"  wrote {path}")
     return path
+
+
+def _polarity_note(report: dict) -> str:
+    """The "lower is better" sentence, but only when it is true of this report.
+
+    ``INVERTED`` is deliberately broader than the live metric table (it still
+    names metrics only older stored runs contain), so the caption has to be
+    decided per report rather than per module. A legend for a mark that appears
+    nowhere in the figure is just a thing to puzzle over.
+    """
+    metrics = report.get("metrics", {})
+    inverted = any(s.get("lower_is_better") or name in INVERTED
+                   for name, s in metrics.items())
+    return " ↓ = lower is better." if inverted else ""
 
 
 def _legend_below(ax, handles, pad_inches: float = 0.62) -> None:
@@ -157,8 +181,8 @@ def heatmap(report: dict, out: Path) -> Path:
         pad_inches=1.05,
     )
     return _save(fig, out, "Every score in the run",
-                 "Darker is higher. ↓ marks the one metric where lower is better. "
-                 "A skipped cell is a missing input, not a zero.")
+                 "Darker is higher." + _polarity_note(report)
+                 + " A skipped cell is a missing input, not a zero.")
 
 
 # --- figure 2: the headline per metric ------------------------------------
@@ -208,7 +232,7 @@ def metric_means(report: dict, out: Path) -> Path:
     ax.set_xticks([0, 0.25, 0.5, 0.75, 1.0])
     ax.invert_yaxis()
     return _save(fig, out, "Mean score by metric",
-                 "n is how many cases produced a number. ↓ = lower is better.")
+                 "n is how many cases produced a number." + _polarity_note(report))
 
 
 # --- figures 3 and 4: two metrics that should agree, and do not -----------
@@ -488,11 +512,11 @@ def main() -> None:
         heatmap(report, plots / "01-all-scores.png")
         metric_means(report, plots / "02-metric-means.png")
         paired_metrics(
-            report, "context_utilization", "faithfulness",
-            plots / "03-utilization-vs-faithfulness.png",
-            "context_utilization disagrees with faithfulness on the same answers",
-            "Where the answer lists several people, utilization reads 0 while "
-            "faithfulness says every claim is supported.",
+            report, "context_recall", "faithfulness",
+            plots / "03-recall-vs-faithfulness.png",
+            "Whether a weak answer is the retriever's fault or the generator's",
+            "Both low is a retrieval problem; faithfulness alone low is the "
+            "prompt or the model. This is the split the stage framework exists for.",
         )
         paired_metrics(
             report, "answer_correctness", "semantic_similarity",

@@ -49,7 +49,7 @@ class EvalCase:
     #: needs answered. A negative case names no slugs.
     expect_no_answer: bool = False
     #: A ground-truth answer, in prose. Optional, and only the LLM-judged
-    #: metrics use it (``evaluation.ragas_eval``): every "was the answer right?"
+    #: metrics use it (``evaluation.deepeval_eval``): every "was the answer right?"
     #: or "was the right context retrieved?" judgement needs something to
     #: compare against, and slugs alone cannot express a claim. Cases without
     #: one are still scored by every metric that does not need it.

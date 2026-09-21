@@ -23,10 +23,10 @@ bare environment (`pinecone`, `mistralai`, `trafilatura`, `google.generativeai`,
 `google.cloud.storage`). Where the real libraries are present they are used.
 Tests never call a live API — providers are injected as fakes.
 
-`ragas` is deliberately NOT stubbed. It is an opt-in extra (`pip install -e
+`deepeval` is deliberately NOT stubbed. It is an opt-in extra (`pip install -e
 ".[eval]"`) that CI does not install, and a stub of a judging library would
-assert nothing; the tests that need it call `pytest.importorskip("ragas")` and
-skip instead.
+assert nothing; the tests that need it call `pytest.importorskip("deepeval")`
+and skip instead. 52 of the 68 tests in `test_deepeval_eval.py` run without it.
 
 ## Coverage
 
@@ -58,11 +58,14 @@ skip instead.
   golden-file parsing and its invariants (every case names slugs or expects a
   refusal; every registered section type has a case), no-answer scoring
   including refusals that add a caveat, and reproducible `--sample` selection.
-- `test_ragas_eval.py` — the Ragas framework's pure half (sample building,
-  the stage/metric table, the scoring loop's skip-vs-error rules, report
-  aggregation and gates) always; plus, only when the `eval` extra is installed,
-  two drift guards — that every metric still takes the inputs the table claims,
-  and that the judge is still built the way the Anthropic API requires.
+- `test_deepeval_eval.py` — the judged framework's pure half (sample building,
+  the on-disk dump format including dumps written before the DeepEval port, the
+  stage/metric table, the scoring loop's skip-vs-error rules, report aggregation
+  and gates) always; plus, only when the `eval` extra is installed, the drift
+  guards — that every metric still takes the inputs the table claims, that
+  G-Eval's real parameters are read rather than its bare annotation, that no
+  sampling parameter can reach the Anthropic API, that a judged metric is never
+  silently defaulted to OpenAI, and that a judge cache hit is really a hit.
 - `test_e2e_live.py` — opt-in (`KMP_LIVE_E2E=1`); drives the real pipeline
   against the live index.
 
