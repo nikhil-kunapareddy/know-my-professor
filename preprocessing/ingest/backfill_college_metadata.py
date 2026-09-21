@@ -31,7 +31,8 @@ from pinecone import Pinecone
 
 from shared.config import PINECONE_DEFAULT_INDEX
 
-from ..sources.profiles.config import COLLEGES_BY_KEY, DEFAULT_COLLEGE
+from ..sources.entities import DEFAULT_COLLEGE
+from ..sources.profiles.config import COLLEGES_BY_KEY
 
 #: Vector ids are ``{entity}#{section}``; a namespaced entity carries its college
 #: already, so only un-prefixed ids need the backfill.

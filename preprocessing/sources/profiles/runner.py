@@ -29,7 +29,8 @@ from dataclasses import asdict
 from shared.config import gcs_bucket
 from shared.gcs import GCSStore, LocalStore, OutputStore
 
-from .config import COLLEGES, COLLEGES_BY_KEY, DEFAULT_COLLEGE, LOCAL_OUTPUT_DIR, College
+from ..entities import DEFAULT_COLLEGE
+from .config import COLLEGES, COLLEGES_BY_KEY, LOCAL_OUTPUT_DIR, College
 from .fetcher import DirectoryFetcher
 from .llm_parser import LlmProfileParser, ThinProfilePage
 from .profile_parser import ProfileParser

@@ -11,6 +11,9 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+# Re-exported: callers here think in terms of colleges, and the id scheme that
+# names one is shared with every other source (see ..entities).
+
 KHOURY_BASE = "https://www.khoury.northeastern.edu"
 KHOURY_LISTING = f"{KHOURY_BASE}/people/"
 PROFILE_URL_RE = re.compile(rf"^{re.escape(KHOURY_BASE)}/people/[a-z0-9-]+/$")
@@ -71,10 +74,6 @@ COLLEGES: tuple[College, ...] = (
     College("damore-mckim", "https://damore-mckim.northeastern.edu"),
     College("camd", "https://camd.northeastern.edu", crawl_delay=10.0),
 )
-
-#: The college whose vector IDs stay unprefixed. Changing this re-mints every
-#: Khoury vector ID and orphans the ones already in Pinecone.
-DEFAULT_COLLEGE = "khoury"
 
 COLLEGES_BY_KEY: dict[str, College] = {c.key: c for c in COLLEGES}
 
