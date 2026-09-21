@@ -69,14 +69,16 @@ def main() -> None:
     outcomes: list[CaseOutcome] = []
     for case in cases:
         if pipeline is not None:
-            result = pipeline.answer(case.question)
+            result = pipeline.answer(case.question, namespace=case.namespace)
             outcomes.append(CaseOutcome(
                 case=case,
                 retrieved_ids=[s.document_id for s in result.sources],
                 answer=result.answer,
             ))
         else:
-            kept = live.retrieve(case.question, args.top_k, args.min_score)
+            kept = live.retrieve(
+                case.question, args.top_k, args.min_score, namespace=case.namespace
+            )
             outcomes.append(CaseOutcome(case=case, retrieved_ids=[r.document_id for r in kept]))
         print(f"  {'HIT ' if outcomes[-1].hit else 'MISS'} [{case.id}]")
 

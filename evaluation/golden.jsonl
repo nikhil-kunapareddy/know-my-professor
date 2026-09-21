@@ -103,3 +103,11 @@
 {"id": "no-answer-fabricated-person", "question": "What does Professor Zelda Quibblesworth research?", "expect_no_answer": true, "notes": "Invented name. Tests that a plausible-sounding person query is refused rather than answered from the nearest neighbour."}
 {"id": "no-answer-tuition", "question": "How much does the MS in Computer Science cost per semester?", "expect_no_answer": true, "notes": "Administrative fact that the faculty corpus does not contain; stray mentions of financial aid must not be padded into an answer."}
 {"id": "no-answer-private-details", "question": "What is Alina Oprea's home address and salary?", "expect_no_answer": true, "notes": "Private information absent from the corpus. The retriever WILL return her chunks on the name, so this specifically tests that the model declines rather than confabulating from a relevant-but-insufficient context."}
+
+# --- courses namespace (added 2026-09-21) -------------------------------------
+# These query the `courses` Pinecone namespace, not the professor corpus. Run
+# them with --namespace courses; against the default namespace they retrieve
+# nothing, because a Pinecone query reads exactly one namespace.
+{"id": "course-theory-of-computation", "question": "What does CS 3800 cover?", "expected_slugs": ["course-cs3800"], "expected_sections": ["course_description"], "namespace": "courses", "reference": "CS 3800, Theory of Computation, introduces automata theory, computability, and complexity — the capabilities and limitations of computers.", "notes": "Course lookup by code; the most literal shape of a catalog question."}
+{"id": "course-who-teaches-compilers", "question": "Who teaches Compilers?", "expected_slugs": ["course-cs4410"], "expected_sections": ["course_instructors"], "namespace": "courses", "notes": "The question that motivated the courses corpus. No reference: the instructor set changes every term, so a fixed prose answer would score correct answers as wrong."}
+{"id": "course-discrete-structures-prereq", "question": "What are the prerequisites for Discrete Structures?", "expected_slugs": ["course-cs1800"], "expected_sections": ["course_description"], "namespace": "courses", "notes": "Requisites are folded into the description chunk rather than given their own section, so this must retrieve course_description."}

@@ -1,4 +1,48 @@
 {
+  "courses": [
+    {
+      "chunks": [
+        {
+          "metadata": {
+            "content_hash": "sha256:3c7ed04c79a53514eead2fcce1c74515",
+            "course_code": "CS 3800",
+            "course_title": "Theory of Computation",
+            "credits": "4 Hours",
+            "section_type": "course_description",
+            "subject": "CS",
+            "text": "CS 3800 — Theory of Computation (4 Hours)\nDescription:\nIntroduces the theory behind computers and computing. Covers automata theory, computability, and complexity.\nPrerequisite(s): CS 1800 with a minimum grade of C-\nAttribute(s): NUpath Formal/Quant Reasoning",
+            "url": "https://catalog.northeastern.edu/course-descriptions/cs/"
+          },
+          "text": "CS 3800 — Theory of Computation (4 Hours)\nDescription:\nIntroduces the theory behind computers and computing. Covers automata theory, computability, and complexity.\nPrerequisite(s): CS 1800 with a minimum grade of C-\nAttribute(s): NUpath Formal/Quant Reasoning",
+          "vector_id": "course-cs3800#course_description"
+        }
+      ],
+      "slug": "cs3800"
+    },
+    {
+      "chunks": [
+        {
+          "metadata": {
+            "content_hash": "sha256:3d875d5a4a55baafffe02853ac87ab07",
+            "course_code": "MATH 1341",
+            "course_title": "Calculus 1 for Science and Engineering",
+            "credits": "4 Hours",
+            "section_type": "course_description",
+            "subject": "MATH",
+            "text": "MATH 1341 — Calculus 1 for Science and Engineering (4 Hours)\nDescription:\nCovers definition, calculation, and major uses of the derivative, as well as an introduction to integration.",
+            "url": "https://catalog.northeastern.edu/course-descriptions/math/"
+          },
+          "text": "MATH 1341 — Calculus 1 for Science and Engineering (4 Hours)\nDescription:\nCovers definition, calculation, and major uses of the derivative, as well as an introduction to integration.",
+          "vector_id": "course-math1341#course_description"
+        }
+      ],
+      "slug": "math1341"
+    },
+    {
+      "chunks": [],
+      "slug": "xyz9999"
+    }
+  ],
   "profiles": [
     {
       "chunks": [
@@ -278,6 +322,63 @@
       "chunks": [],
       "is_substantive": true,
       "slug": null
+    }
+  ],
+  "sections": [
+    {
+      "chunks": [
+        {
+          "metadata": {
+            "content_hash": "sha256:c7acd26db60739b68cd8dbe697752be4",
+            "course_code": "CS 3800",
+            "course_title": "Theory of Computation",
+            "instructors": [
+              "Alexandru Suciu",
+              "Emanuele Viola"
+            ],
+            "section_type": "course_instructors",
+            "subject": "CS",
+            "terms": [
+              "Fall 2026 Semester"
+            ],
+            "text": "CS 3800 — Theory of Computation\nInstructors:\n- Fall 2026 Semester: Alexandru Suciu, Emanuele Viola",
+            "url": ""
+          },
+          "text": "CS 3800 — Theory of Computation\nInstructors:\n- Fall 2026 Semester: Alexandru Suciu, Emanuele Viola",
+          "vector_id": "course-cs3800#course_instructors"
+        }
+      ],
+      "slug": "cs3800"
+    },
+    {
+      "chunks": [
+        {
+          "metadata": {
+            "content_hash": "sha256:37f7f2809aebc025a30496b90268d958",
+            "course_code": "MATH 1341",
+            "course_title": "Calculus 1 for Science and Engineering",
+            "instructors": [
+              "Jane Doe",
+              "John Roe"
+            ],
+            "section_type": "course_instructors",
+            "subject": "MATH",
+            "terms": [
+              "Fall 2026 Semester",
+              "Spring 2027 Semester"
+            ],
+            "text": "MATH 1341 — Calculus 1 for Science and Engineering\nInstructors:\n- Fall 2026 Semester: Jane Doe\n- Spring 2027 Semester: Jane Doe, John Roe",
+            "url": ""
+          },
+          "text": "MATH 1341 — Calculus 1 for Science and Engineering\nInstructors:\n- Fall 2026 Semester: Jane Doe\n- Spring 2027 Semester: Jane Doe, John Roe",
+          "vector_id": "course-math1341#course_instructors"
+        }
+      ],
+      "slug": "math1341"
+    },
+    {
+      "chunks": [],
+      "slug": "cs1210"
     }
   ],
   "weblinks": [

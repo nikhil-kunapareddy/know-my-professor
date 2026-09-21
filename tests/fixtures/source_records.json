@@ -14,14 +14,30 @@
       "url": "https://www.khoury.northeastern.edu/people/jane-doe/",
       "name": "Jane Doe",
       "title": "Associate Professor",
-      "roles": ["Tenured/Tenure-Track Faculty"],
-      "campuses": ["Boston"],
-      "areas_of_interest": ["Programming Languages", "Type Systems"],
+      "roles": [
+        "Tenured/Tenure-Track Faculty"
+      ],
+      "campuses": [
+        "Boston"
+      ],
+      "areas_of_interest": [
+        "Programming Languages",
+        "Type Systems"
+      ],
       "biography": "Jane Doe studies type systems and compilers.",
-      "research_interests": ["Programming languages", "Compilers"],
-      "education": ["PhD in Computer Science, MIT"],
-      "labs_and_groups": ["Programming Research Lab"],
-      "projects": ["Typed IR for gradual typing"]
+      "research_interests": [
+        "Programming languages",
+        "Compilers"
+      ],
+      "education": [
+        "PhD in Computer Science, MIT"
+      ],
+      "labs_and_groups": [
+        "Programming Research Lab"
+      ],
+      "projects": [
+        "Typed IR for gradual typing"
+      ]
     },
     {
       "slug": "ravi-krishnan",
@@ -29,7 +45,10 @@
       "name": "Ravi Krishnan",
       "title": "",
       "roles": [],
-      "campuses": ["Vancouver", "Boston"],
+      "campuses": [
+        "Vancouver",
+        "Boston"
+      ],
       "areas_of_interest": [],
       "biography": "Works on distributed systems.",
       "research_interests": [],
@@ -42,11 +61,19 @@
       "url": "https://www.khoury.northeastern.edu/people/amelie-rousseau/",
       "name": "Amélie Rousseau",
       "title": "Assistant Teaching Professor",
-      "roles": ["Teaching Faculty"],
-      "campuses": ["Oakland"],
-      "areas_of_interest": ["Human–Computer Interaction"],
+      "roles": [
+        "Teaching Faculty"
+      ],
+      "campuses": [
+        "Oakland"
+      ],
+      "areas_of_interest": [
+        "Human–Computer Interaction"
+      ],
       "biography": "Amélie Rousseau — research on accessibility and café-based fieldwork.",
-      "research_interests": ["Accessibility"],
+      "research_interests": [
+        "Accessibility"
+      ],
       "education": [],
       "labs_and_groups": [],
       "projects": []
@@ -61,7 +88,9 @@
       "areas_of_interest": [],
       "biography": "",
       "research_interests": [],
-      "education": ["BS in Something"],
+      "education": [
+        "BS in Something"
+      ],
       "labs_and_groups": [],
       "projects": []
     },
@@ -87,22 +116,33 @@
         },
         {
           "section_type": "current_projects",
-          "text": ["Typed IR", "Gradual contracts"],
+          "text": [
+            "Typed IR",
+            "Gradual contracts"
+          ],
           "source_url": "https://jane.example/research/"
         },
         {
           "section_type": "recent_publications",
-          "text": ["Gradual Types Revisited (2025)", "Contracts at Scale (2024)"],
+          "text": [
+            "Gradual Types Revisited (2025)",
+            "Contracts at Scale (2024)"
+          ],
           "source_url": "https://jane.example/pubs/"
         },
         {
           "section_type": "students_or_lab_members",
-          "text": ["Alice Chen", "Bob Ortiz"],
+          "text": [
+            "Alice Chen",
+            "Bob Ortiz"
+          ],
           "source_url": "https://jane.example/people/"
         },
         {
           "section_type": "recent_news",
-          "text": ["2025-04: paper accepted at POPL"],
+          "text": [
+            "2025-04: paper accepted at POPL"
+          ],
           "source_url": "https://jane.example/news/"
         }
       ]
@@ -128,7 +168,9 @@
         },
         {
           "section_type": "unknown_future_section",
-          "text": ["Should fall back to a title-cased label"],
+          "text": [
+            "Should fall back to a title-cased label"
+          ],
           "source_url": "https://ravi.example/"
         }
       ]
@@ -136,7 +178,110 @@
     {
       "professor_name": "No Slug",
       "sections": [
-        {"section_type": "website_summary", "text": "ignored", "source_url": "u"}
+        {
+          "section_type": "website_summary",
+          "text": "ignored",
+          "source_url": "u"
+        }
+      ]
+    }
+  ],
+  "courses": [
+    {
+      "code": "CS 3800",
+      "slug": "cs3800",
+      "subject": "CS",
+      "subject_slug": "cs",
+      "number": "3800",
+      "title": "Theory of Computation",
+      "credits": "4 Hours",
+      "description": "Introduces the theory behind computers and computing. Covers automata theory, computability, and complexity.",
+      "requisites": [
+        "Prerequisite(s): CS 1800 with a minimum grade of C-",
+        "Attribute(s): NUpath Formal/Quant Reasoning"
+      ],
+      "url": "https://catalog.northeastern.edu/course-descriptions/cs/"
+    },
+    {
+      "code": "MATH 1341",
+      "slug": "math1341",
+      "subject": "MATH",
+      "subject_slug": "math",
+      "number": "1341",
+      "title": "Calculus 1 for Science and Engineering",
+      "credits": "4 Hours",
+      "description": "Covers definition, calculation, and major uses of the derivative, as well as an introduction to integration.",
+      "requisites": [],
+      "url": "https://catalog.northeastern.edu/course-descriptions/math/"
+    },
+    {
+      "code": "XYZ 9999",
+      "slug": "xyz9999",
+      "subject": "XYZ",
+      "subject_slug": "xyz",
+      "number": "9999",
+      "title": "Placeholder With No Description",
+      "credits": "",
+      "description": "",
+      "requisites": [],
+      "url": ""
+    }
+  ],
+  "sections": [
+    {
+      "slug": "cs3800",
+      "code": "CS 3800",
+      "title": "Theory of Computation",
+      "subject": "CS",
+      "terms": [
+        {
+          "code": "202710",
+          "description": "Fall 2026 Semester",
+          "instructors": [
+            "Alexandru Suciu",
+            "Emanuele Viola"
+          ],
+          "section_count": 3
+        }
+      ]
+    },
+    {
+      "slug": "math1341",
+      "code": "MATH 1341",
+      "title": "Calculus 1 for Science and Engineering",
+      "subject": "MATH",
+      "terms": [
+        {
+          "code": "202710",
+          "description": "Fall 2026 Semester",
+          "instructors": [
+            "Jane Doe"
+          ],
+          "section_count": 9
+        },
+        {
+          "code": "202730",
+          "description": "Spring 2027 Semester",
+          "instructors": [
+            "Jane Doe",
+            "John Roe"
+          ],
+          "section_count": 7
+        }
+      ]
+    },
+    {
+      "slug": "cs1210",
+      "code": "CS 1210",
+      "title": "Staffed But Unnamed",
+      "subject": "CS",
+      "terms": [
+        {
+          "code": "202710",
+          "description": "Fall 2026 Semester",
+          "instructors": [],
+          "section_count": 4
+        }
       ]
     }
   ]

@@ -13,6 +13,7 @@ import time
 import pytest
 
 from preprocessing.sources.entities import DEFAULT_COLLEGE
+from preprocessing.sources.pacing import Pacer
 from preprocessing.sources.profiles.config import (
     COLLEGES,
     COLLEGES_BY_KEY,
@@ -21,7 +22,6 @@ from preprocessing.sources.profiles.config import (
 )
 from preprocessing.sources.profiles.runner import (
     ProfileScraper,
-    _Pacer,
     _resolve_colleges,
     _urls_key,
     build_parser,
@@ -161,7 +161,7 @@ def test_resolve_colleges_defaults_to_all_and_rejects_unknown():
 
 def test_pacer_holds_the_delay_across_concurrent_callers():
     """Workers must not all fire at once and merely stagger the next round."""
-    pacer = _Pacer(0.05)
+    pacer = Pacer(0.05)
     start = time.monotonic()
     for _ in range(4):
         pacer.wait()

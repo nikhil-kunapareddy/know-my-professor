@@ -43,6 +43,10 @@ class EvalCase:
     question: str
     expected_slugs: tuple[str, ...] = ()
     expected_sections: tuple[str, ...] = ()
+    #: Which Pinecone namespace answers this case. A query reads exactly one, so
+    #: a course case run against the professor namespace retrieves nothing and
+    #: scores a miss that says nothing about retrieval quality.
+    namespace: str | None = None
     #: True when the RIGHT behaviour is to decline. Without cases like these an
     #: evaluation can only reward retrieving more, so raising the relevance floor
     #: always looks free — which is exactly the question MIN_RETRIEVAL_SCORE
@@ -78,6 +82,7 @@ class EvalCase:
             question=raw["question"],
             expected_slugs=slugs,
             expected_sections=tuple(raw.get("expected_sections", ())),
+            namespace=raw.get("namespace") or None,
             expect_no_answer=expect_no_answer,
             reference=raw.get("reference", ""),
             notes=raw.get("notes", ""),

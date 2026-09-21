@@ -11,6 +11,11 @@ from preprocessing.sources.profiles.source import ProfileSource
 from preprocessing.sources.weblinks.source import WeblinksSource
 
 
+def _ids(store, limit=None):
+    """Vector ids across every namespace _collect_chunks grouped them into."""
+    return {c.vector_id for chunks in _collect_chunks(store, limit).values() for c in chunks}
+
+
 @pytest.fixture
 def profiles():
     return ProfileSource()
@@ -172,7 +177,7 @@ def test_collect_chunks_skips_enrichment_for_unknown_entities():
              "sections": [{"section_type": "website_summary", "text": "s", "source_url": "u"}]},
         ],
     )
-    ids = {c.vector_id for c in _collect_chunks(store, limit=None)}
+    ids = _ids(store)
     assert ids == {"a#biography", "a#website_summary"}
 
 
@@ -188,8 +193,8 @@ def test_collect_chunks_limit_scopes_enrichment_to_the_slice():
              "sections": [{"section_type": "website_summary", "text": "s", "source_url": "u"}]},
         ],
     )
-    assert {c.vector_id for c in _collect_chunks(store, limit=1)} == {"a#biography"}
-    assert {c.vector_id for c in _collect_chunks(store, limit=2)} == {
+    assert _ids(store, limit=1) == {"a#biography"}
+    assert _ids(store, limit=2) == {
         "a#biography", "b#biography", "b#website_summary",
     }
 
@@ -201,7 +206,7 @@ def test_collect_chunks_keeps_enrichment_for_thin_profiles():
         [{"slug": "thin", "professor_name": "T",
           "sections": [{"section_type": "website_summary", "text": "s", "source_url": "u"}]}],
     )
-    assert {c.vector_id for c in _collect_chunks(store, limit=None)} == {"thin#website_summary"}
+    assert _ids(store) == {"thin#website_summary"}
 
 
 # --- PineconeStore.fetch_existing_hashes ----------------------------------

@@ -43,6 +43,16 @@ weblinks = [
     "google-cloud-storage==2.18.2",
     "know-my-professor[extract-gemini]",
 ]
+courses = [
+    "requests==2.32.3",
+    "beautifulsoup4==4.12.3",
+    "google-cloud-storage==2.18.2",
+]
+# Banner returns JSON, so no HTML parser is needed here.
+sections = [
+    "requests==2.32.3",
+    "google-cloud-storage==2.18.2",
+]
 ingest = [
     "google-cloud-storage==2.18.2",
     "pinecone==5.4.2",
@@ -91,7 +101,7 @@ eval = [
 # GitHub Actions installs the FULL set instead, so cross-extra conflicts still
 # get caught on PRs.
 ci = [
-    "know-my-professor[api,profiles,weblinks,ingest,dev]",
+    "know-my-professor[api,profiles,weblinks,courses,sections,ingest,dev]",
     "httpx",  # required by fastapi's TestClient
 ]
 

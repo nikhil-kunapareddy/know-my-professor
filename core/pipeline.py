@@ -74,15 +74,24 @@ class RAGPipeline:
         self,
         question: str,
         filters: Mapping[str, Any] | None = None,
+        namespace: str | None = None,
     ) -> RAGResult:
-        """Embed the question, retrieve context, and generate a cited answer."""
+        """Embed the question, retrieve context, and generate a cited answer.
+
+        ``namespace`` selects which partition of the index to search. It is a
+        hard choice, not a ranking hint: a Pinecone query reads exactly one
+        namespace, so passing the courses namespace means professor chunks
+        cannot appear at all, and vice versa. Defaults to the professor corpus.
+        """
         timings: dict[str, float] = {}
 
         with _timed(timings, "embed"):
             query_embedding = self.embedder.embed_query(question)
 
         with _timed(timings, "retrieve"):
-            results = self.retriever.retrieve(query_embedding, self.top_k, filters=filters)
+            results = self.retriever.retrieve(
+                query_embedding, self.top_k, filters=filters, namespace=namespace
+            )
 
         # Vector search always returns top_k rows, however unrelated they are, so
         # without a floor the no-answer path could never fire and the model would

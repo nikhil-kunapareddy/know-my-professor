@@ -85,8 +85,18 @@ class Source(ABC):
     sections: tuple[SectionSpec, ...] = ()
     #: True if records only make sense alongside an entity defined by another
     #: source (weblinks enrich a professor). False for a source that defines its
-    #: own entities (profiles, and a future standalone courses corpus).
+    #: own entities (profiles, courses).
     depends_on_entities: bool = False
+    #: Pinecone namespace this source's vectors live in. ``None`` is the default
+    #: namespace, where the professor corpus already lives -- leave it there, as
+    #: moving it would re-mint every existing vector.
+    #:
+    #: A namespace is a hard partition: a query names exactly one, so chunks in
+    #: different namespaces NEVER compete for the same top-k slots. That is the
+    #: point. ~6,500 course chunks in with ~4,100 professor chunks would make
+    #: courses the majority of the corpus, and "who works on machine learning?"
+    #: would start returning syllabi instead of people.
+    namespace: str | None = None
 
     def entity_id(self, record: dict) -> str | None:
         """The entity a record belongs to. Default: the professor slug."""
