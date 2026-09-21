@@ -1,7 +1,13 @@
-"""The Khoury directory profile source: scraped profile JSON -> chunks.
+"""The faculty directory profile source: scraped profile JSON -> chunks.
 
-Profiles define the entity space (one professor per ``slug``); every other
-source hangs off the slugs this one produces.
+Profiles define the entity space (one professor per entity id); every other
+source hangs off the ids this one produces.
+
+Records from more than one college share this source, because a College of
+Science biography is still a biography -- minting per-college section keys
+would fork the taxonomy for no semantic gain, and the registry rejects a second
+source reusing these keys anyway. What must stay unique is the entity id, which
+``entity_id`` namespaces by college.
 """
 
 from __future__ import annotations
@@ -14,6 +20,7 @@ from ..base import (
     header_line,
     render_section,
 )
+from .config import DEFAULT_COLLEGE
 
 #: Profile accordion sections, in the order they are emitted.
 PROFILE_SECTIONS: tuple[SectionSpec, ...] = (
@@ -34,6 +41,21 @@ class ProfileSource(Source):
     sections = PROFILE_SECTIONS
     depends_on_entities = False
 
+    def entity_id(self, record: dict) -> str | None:
+        """Globally unique id for a professor: ``{college}-{slug}``.
+
+        Khoury is the exception and stays a bare ``{slug}``. Its vectors predate
+        multi-college support, and an id is a Pinecone primary key -- re-minting
+        the Khoury ids would write 2,221 new vectors and orphan the originals
+        rather than update them. Records with no ``college`` field are Khoury by
+        construction (nothing else wrote profiles before the field existed).
+        """
+        slug = record.get("slug")
+        if not slug:
+            return None
+        college = record.get("college") or DEFAULT_COLLEGE
+        return slug if college == DEFAULT_COLLEGE else f"{college}-{slug}"
+
     def is_ingestable(self, record: dict) -> bool:
         """True if a profile has enough content to be worth ingesting.
 
@@ -53,6 +75,7 @@ class ProfileSource(Source):
         slug = record.get("slug")
         if not slug:
             return []
+        entity_id = self.entity_id(record)
 
         base_metadata = {
             "professor_slug": slug,
@@ -63,6 +86,12 @@ class ProfileSource(Source):
             "roles": record.get("roles") or [],
             "areas_of_interest": record.get("areas_of_interest") or [],
         }
+        # Added only when the record carries it, which keeps pre-multi-college
+        # Khoury records -- and the golden fixtures pinning them -- unchanged.
+        # A filter therefore reads "absent means khoury"; run
+        # preprocessing.ingest.backfill_college_metadata to make it explicit.
+        if record.get("college"):
+            base_metadata["college"] = record["college"]
         # The header falls back to the slug, but the metadata name does not --
         # keeping both behaviours as-is preserves existing content hashes.
         header = header_line(
@@ -78,7 +107,7 @@ class ProfileSource(Source):
             text = render_section(header, spec.label, value)
             chunks.append(
                 Chunk(
-                    vector_id=f"{slug}#{spec.key}",
+                    vector_id=f"{entity_id}#{spec.key}",
                     text=text,
                     metadata={
                         **base_metadata,
