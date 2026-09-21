@@ -32,6 +32,13 @@ skip instead.
 
 - `test_scraper.py` — `ProfileParser.parse` (header/aside/accordion),
   `DirectoryFetcher.extract_total_pages` / `extract_profile_urls`.
+- `test_colleges.py` — multi-college scraping: the college registry, vector-id
+  namespacing (`{college}-{slug}`, Khoury stays bare), that a slug shared by two
+  colleges cannot collide, that `college` metadata never moves `content_hash`,
+  runner wiring (parser selection, URL-cache keys, `_Pacer`), and the LLM profile
+  parser against a fake client — including the thin-page, truncation, and
+  unparseable-output paths, which are the ones that would otherwise store a
+  hollow profile.
 - `test_ingest.py` — per-source chunk rendering, registry invariants (duplicate
   section keys / prefixes rejected), `_collect_chunks` over the registry
   (entity scoping, `--limit` semantics, stale-enrichment skip), and

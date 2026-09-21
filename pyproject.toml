@@ -22,12 +22,19 @@ embed-mistral = ["mistralai==1.9.10"]
 chat-anthropic = ["anthropic==1.6.0"]
 chat-llama = ["llama-api-client==0.6.0"]
 extract-gemini = ["google-generativeai==0.8.3"]
+# Profile extraction for colleges whose template has no parseable structure.
+# Same SDK as chat-anthropic, kept a separate group so a deployable can pull
+# the extractor without implying it also serves chat.
+extract-anthropic = ["anthropic==1.6.0"]
 
 # --- deployables -----------------------------------------------------------
 profiles = [
     "requests==2.32.3",
     "beautifulsoup4==4.12.3",
     "google-cloud-storage==2.18.2",
+    # Non-Khoury colleges are parsed by trafilatura + Claude, not by selectors.
+    "trafilatura==2.1.0",
+    "know-my-professor[extract-anthropic]",
 ]
 weblinks = [
     "requests==2.32.3",
