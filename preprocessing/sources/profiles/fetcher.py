@@ -8,9 +8,9 @@ import time
 import requests
 from bs4 import BeautifulSoup
 
+from ..entities import DEFAULT_COLLEGE
 from .config import (
     COLLEGES_BY_KEY,
-    DEFAULT_COLLEGE,
     PROFILE_URL_RE,
     SCRAPER_REQUEST_TIMEOUT_SECONDS,
     SCRAPER_USER_AGENT,

@@ -38,7 +38,10 @@ and skip instead. 52 of the 68 tests in `test_deepeval_eval.py` run without it.
   runner wiring (parser selection, URL-cache keys, `_Pacer`), and the LLM profile
   parser against a fake client — including the thin-page, truncation, and
   unparseable-output paths, which are the ones that would otherwise store a
-  hollow profile.
+  hollow profile. Also pins that `ProfileSource` and `WeblinksSource` mint
+  entity ids through the same `sources/entities.py` helper: if they disagreed,
+  a College of Science professor's website would enrich the Khoury professor
+  with the same slug.
 - `test_ingest.py` — per-source chunk rendering, registry invariants (duplicate
   section keys / prefixes rejected), `_collect_chunks` over the registry
   (entity scoping, `--limit` semantics, stale-enrichment skip), and

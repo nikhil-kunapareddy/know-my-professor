@@ -12,10 +12,10 @@ import time
 
 import pytest
 
+from preprocessing.sources.entities import DEFAULT_COLLEGE
 from preprocessing.sources.profiles.config import (
     COLLEGES,
     COLLEGES_BY_KEY,
-    DEFAULT_COLLEGE,
     EXTRACTION_SCHEMA,
     College,
 )
@@ -105,10 +105,11 @@ def test_entity_id_is_none_without_a_slug():
 # --- metadata --------------------------------------------------------------
 
 
-def test_college_metadata_is_absent_for_legacy_records():
-    """Pre-multi-college records must render exactly as before, keys included."""
-    chunk = ProfileSource().to_chunks(_record())[0]
-    assert "college" not in chunk.metadata
+def test_college_metadata_is_always_present():
+    """Never conditional: an upsert replaces metadata wholesale, so a chunk that
+    omitted the key would let a re-ingest strip what the backfill wrote."""
+    chunk = ProfileSource().to_chunks(_record())[0]          # no college field
+    assert chunk.metadata["college"] == DEFAULT_COLLEGE
 
 
 def test_college_metadata_is_present_when_the_record_carries_it():
@@ -295,3 +296,61 @@ def test_clean_survives_a_page_with_no_heading():
     from preprocessing.sources.profiles.llm_parser import LlmProfileParser
 
     assert LlmProfileParser.clean("<html><body><article>Some text.</article></body></html>")
+
+
+# --- shared entity-id scheme ----------------------------------------------
+
+
+def test_entity_key_and_college_of_agree_on_the_default():
+    from preprocessing.sources.entities import college_of, entity_key
+
+    assert college_of({}) == DEFAULT_COLLEGE
+    assert college_of({"college": "cos"}) == "cos"
+    assert entity_key({"slug": "jane-doe"}) == "jane-doe"
+    assert entity_key({"slug": "jane-doe", "college": "cos"}) == "cos-jane-doe"
+    assert entity_key({}) is None
+
+
+def test_weblinks_uses_the_same_entity_scheme_as_profiles():
+    """Enrichment must land on the profile it belongs to, not a same-slug twin.
+
+    9 professors appear in both the Khoury and College of Science directories.
+    If the two sources minted ids differently, a CoS professor's website would
+    attach to the Khoury professor of the same slug.
+    """
+    from preprocessing.sources.weblinks.source import WeblinksSource
+
+    profiles, weblinks = ProfileSource(), WeblinksSource()
+    for college in (None, "cos"):
+        record = {"slug": "olga-vitek"}
+        if college:
+            record["college"] = college
+        assert weblinks.entity_id(record) == profiles.entity_id(record)
+
+
+def test_weblinks_chunks_are_namespaced_and_carry_their_college():
+    from preprocessing.sources.weblinks.source import WeblinksSource
+
+    record = {
+        "slug": "olga-vitek",
+        "professor_name": "Olga Vitek",
+        "college": "cos",
+        "sections": [{"section_type": "website_summary", "text": "Runs a lab.",
+                      "source_url": "https://example.edu/"}],
+    }
+    chunk = WeblinksSource().to_chunks(record)[0]
+    assert chunk.vector_id == "cos-olga-vitek#website_summary"
+    assert chunk.metadata["college"] == "cos"
+    assert chunk.metadata["professor_slug"] == "olga-vitek"  # slug stays bare
+
+
+def test_weblinks_legacy_records_keep_bare_ids():
+    from preprocessing.sources.weblinks.source import WeblinksSource
+
+    record = {
+        "slug": "olga-vitek",
+        "sections": [{"section_type": "website_summary", "text": "Runs a lab."}],
+    }
+    chunk = WeblinksSource().to_chunks(record)[0]
+    assert chunk.vector_id == "olga-vitek#website_summary"
+    assert chunk.metadata["college"] == DEFAULT_COLLEGE
