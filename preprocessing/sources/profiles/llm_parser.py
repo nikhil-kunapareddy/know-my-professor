@@ -20,6 +20,7 @@ import json
 import os
 
 import trafilatura
+from bs4 import BeautifulSoup
 
 from shared.retry import with_backoff
 
@@ -86,9 +87,24 @@ class LlmProfileParser:
 
     @staticmethod
     def clean(html: str) -> str:
-        """Main-content text of a profile page, truncated to the token bound."""
-        text = trafilatura.extract(html, include_comments=False, include_tables=True)
-        return (text or "").strip()[:EXTRACT_MAX_CLEAN_CHARS]
+        """Main-content text of a profile page, truncated to the token bound.
+
+        The page's ``<h1>`` is prepended because trafilatura treats a heading as
+        boilerplate on some of these templates and drops it -- and on a faculty
+        profile the heading IS the professor's name. Without it the model has
+        only prose like "Prof. Suciu's research interests..." to go on and
+        returns an empty ``name``, which then propagates into the chunk header
+        and the citation metadata. The slug is no substitute: ``alex-suciu`` is
+        the page for Alexandru Suciu.
+        """
+        body = (trafilatura.extract(html, include_comments=False, include_tables=True) or "").strip()
+
+        heading = BeautifulSoup(html, "html.parser").find("h1")
+        name = heading.get_text(strip=True) if heading else ""
+        if name and not body.startswith(name):
+            body = f"{name}\n{body}"
+
+        return body[:EXTRACT_MAX_CLEAN_CHARS]
 
     def parse(self, url: str, html: str) -> Profile:
         """Extract one profile. Raises ``ThinProfilePage`` if the page is empty."""

@@ -260,3 +260,38 @@ def test_college_is_a_frozen_value_object():
     college = College("x", "https://x.example.com")
     with pytest.raises(dataclasses.FrozenInstanceError):
         college.key = "y"
+
+
+def test_clean_prepends_the_h1_so_the_name_survives():
+    """trafilatura drops the heading on some templates -- and it holds the name.
+
+    Regression: 12% of a College of Science run returned an empty ``name``
+    because the bio only ever says "Prof. Suciu", and the slug is no fallback
+    (``alex-suciu`` is the page for Alexandru Suciu).
+    """
+    from preprocessing.sources.profiles.llm_parser import LlmProfileParser
+
+    html = (
+        "<html><body><h1>Alexandru Suciu</h1><article>"
+        + ("Prof. Suciu's research interests are in Topology. " * 8)
+        + "</article></body></html>"
+    )
+    cleaned = LlmProfileParser.clean(html)
+    assert cleaned.startswith("Alexandru Suciu")
+
+
+def test_clean_does_not_duplicate_a_heading_trafilatura_already_kept():
+    from preprocessing.sources.profiles.llm_parser import LlmProfileParser
+
+    html = (
+        "<html><body><article><h1>Jane Doe</h1>"
+        + ("Jane Doe studies compilers and type systems. " * 8)
+        + "</article></body></html>"
+    )
+    assert LlmProfileParser.clean(html).count("Jane Doe\n") <= 1
+
+
+def test_clean_survives_a_page_with_no_heading():
+    from preprocessing.sources.profiles.llm_parser import LlmProfileParser
+
+    assert LlmProfileParser.clean("<html><body><article>Some text.</article></body></html>")
