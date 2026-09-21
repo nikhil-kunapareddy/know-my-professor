@@ -41,10 +41,18 @@ def scrape(
     store: OutputStore,
     subjects: list[str],
     dry_run: bool = False,
-) -> tuple[int, int]:
-    """Fetch each subject and store its courses. Returns (written, skipped)."""
+    existing_hashes: dict[str, str] | None = None,
+) -> tuple[int, int, int]:
+    """Fetch each subject and store its courses.
+
+    Returns (written, unchanged, skipped). A course whose ``record_hash`` matches
+    what is already stored is not rewritten: the catalog is stable for a year, so
+    without this every monthly run would burn ~6,500 GCS writes restating it --
+    permanently over the 5,000/month free tier for no change at all.
+    """
     prefix = CourseSource.prefix
-    written = skipped = 0
+    existing_hashes = existing_hashes or {}
+    written = unchanged = skipped = 0
 
     for i, subject in enumerate(subjects, 1):
         try:
@@ -61,6 +69,9 @@ def scrape(
             if len(record.get("description") or "") < MIN_DESCRIPTION_CHARS:
                 skipped += 1
                 continue
+            if existing_hashes.get(record["slug"]) == record.get("record_hash"):
+                unchanged += 1
+                continue
             if not dry_run:
                 store.write_text(
                     f"{prefix}{record['slug']}.json",
@@ -68,9 +79,9 @@ def scrape(
                 )
             kept += 1
         written += kept
-        print(f"  [{i}/{len(subjects)}] {subject}: {len(records)} parsed, {kept} stored")
+        print(f"  [{i}/{len(subjects)}] {subject}: {len(records)} parsed, {kept} new/changed")
 
-    return written, skipped
+    return written, unchanged, skipped
 
 
 def main() -> None:
@@ -78,6 +89,7 @@ def main() -> None:
     parser.add_argument("--subject", default=None, help="Comma-separated subject codes (default: all)")
     parser.add_argument("--limit", type=int, default=None, help="Only process the first N subjects")
     parser.add_argument("--dry-run", action="store_true", help="Parse and report; write nothing")
+    parser.add_argument("--force", action="store_true", help="Rewrite every course, even if unchanged")
     parser.add_argument(
         "--delay", type=float, default=REQUEST_DELAY_SECONDS, help="Seconds between catalog requests"
     )
@@ -102,9 +114,18 @@ def main() -> None:
     if not subjects:
         sys.exit("error: no subjects to scrape")
 
+    existing = {} if args.force else store.load_hashes(CourseSource.prefix, "record_hash")
+    if existing:
+        print(f"{len(existing)} course(s) already stored — unchanged ones will be skipped")
+
     print(f"\nScraping {len(subjects)} subject(s){' (dry run)' if args.dry_run else ''}...")
-    written, skipped = scrape(fetcher, store, subjects, dry_run=args.dry_run)
-    print(f"\nDone. {written} course(s) stored, {skipped} skipped (no usable description).")
+    written, unchanged, skipped = scrape(
+        fetcher, store, subjects, dry_run=args.dry_run, existing_hashes=existing
+    )
+    print(
+        f"\nDone. {written} course(s) written, {unchanged} unchanged, "
+        f"{skipped} skipped (no usable description)."
+    )
 
 
 if __name__ == "__main__":

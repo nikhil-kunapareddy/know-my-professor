@@ -27,6 +27,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from shared.config import gcs_bucket
 from shared.gcs import GCSStore, LocalStore, OutputStore
 
+from ..base import content_hash
 from ..pacing import Pacer
 from ..profiles.config import LOCAL_OUTPUT_DIR
 from .banner import BannerClient
@@ -41,6 +42,20 @@ def course_slug(subject_course: str) -> str | None:
     """``"CS3800"`` -> ``"cs3800"``, matching the catalog source's slug."""
     m = SUBJECT_COURSE_RE.match((subject_course or "").strip())
     return f"{m.group(1)}{m.group(2)}".lower() if m else None
+
+
+def schedule_hash(record: dict) -> str:
+    """Fingerprint of who teaches this course, per term.
+
+    Covers exactly what reaches the chunk -- term label and instructor list --
+    so a section count changing, or Banner reordering its rows, does not look
+    like a teaching change.
+    """
+    parts = []
+    for term in record.get("terms") or []:
+        label = term.get("description") or term.get("code") or ""
+        parts.append(f"{label}: {', '.join(sorted(term.get('instructors') or []))}")
+    return content_hash("\n".join(sorted(parts)))
 
 
 def _build_store(bucket: str | None) -> OutputStore:
@@ -121,6 +136,7 @@ def main() -> None:
     parser.add_argument("--workers", type=int, default=DEFAULT_WORKERS)
     parser.add_argument("--delay", type=float, default=REQUEST_DELAY_SECONDS)
     parser.add_argument("--dry-run", action="store_true", help="Report only; write nothing")
+    parser.add_argument("--force", action="store_true", help="Rewrite every record, even if unchanged")
     parser.add_argument(
         "--gcs-bucket", default=gcs_bucket(),
         help="If set (or env KMP_GCS_BUCKET), write to gs://BUCKET/ instead of ./data/",
@@ -158,10 +174,21 @@ def main() -> None:
     store = _build_store(args.gcs_bucket)
     print(f"\nOutput store: {store.describe()}")
     source = ScheduleSource()
-    written = skipped = 0
+    existing = {} if args.force else store.load_hashes(source.prefix, "record_hash")
+    if existing:
+        print(f"{len(existing)} schedule record(s) already stored — unchanged ones will be skipped")
+
+    written = unchanged = skipped = 0
     for slug, record in sorted(merged.items()):
         if not source.is_ingestable(record):
             skipped += 1
+            continue
+        record["record_hash"] = schedule_hash(record)
+        # Instructors are reassigned mid-term, so this is not a no-op the way
+        # the catalog usually is -- but most courses are stable between runs,
+        # and rewriting all of them every month is wasted GCS writes.
+        if existing.get(slug) == record["record_hash"]:
+            unchanged += 1
             continue
         if not args.dry_run:
             store.write_text(
@@ -170,7 +197,10 @@ def main() -> None:
         written += 1
 
     verb = "would write" if args.dry_run else "wrote"
-    print(f"Done. {verb} {written} course record(s); {skipped} skipped (no named instructor).")
+    print(
+        f"Done. {verb} {written} course record(s); {unchanged} unchanged; "
+        f"{skipped} skipped (no named instructor)."
+    )
 
 
 if __name__ == "__main__":

@@ -1,9 +1,11 @@
 """Storage backends shared across the preprocessing jobs.
 
 ``OutputStore`` abstracts local FS vs GCS so the scrape loop is identical for
-both. ``GCSStore`` additionally exposes the JSON read/write helpers the ingest
-and weblinks jobs need (iterate records under a prefix, read stored hashes, write
-a record), so all three jobs talk to GCS through one class.
+both, including the JSON helpers (iterate records under a prefix, read stored
+hashes). ``load_hashes`` lives on the base class rather than only on
+``GCSStore`` because a scraper that skips unchanged records must behave the same
+locally as in the cloud: while only GCS implemented it, every local run rewrote
+everything and the skip logic could not be exercised without a bucket.
 
 Every method takes the prefix it operates on. The store deliberately knows
 nothing about which sources exist — that lives in
@@ -33,6 +35,24 @@ class OutputStore(ABC):
     @abstractmethod
     def describe(self) -> str: ...
 
+    @abstractmethod
+    def iter_json(self, prefix: str) -> Iterable[dict]: ...
+
+    def load_hashes(self, prefix: str, field: str = "page_hash") -> dict[str, str]:
+        """Map slug -> stored hash from prior records under ``prefix``.
+
+        Lets a source skip its expensive step -- a Gemini extract call, or simply
+        rewriting a catalog entry that has not changed -- when the upstream
+        content is the same as last run. Defined once here because it is pure
+        logic over ``iter_json``; only the iteration differs per backend.
+        """
+        hashes: dict[str, str] = {}
+        for record in self.iter_json(prefix):
+            slug, value = record.get("slug"), record.get(field)
+            if slug and value:
+                hashes[slug] = value
+        return hashes
+
 
 class LocalStore(OutputStore):
     """Writes under a local directory root. Used for local scraper runs."""
@@ -56,6 +76,11 @@ class LocalStore(OutputStore):
     def existing_slugs(self, prefix: str) -> set[str]:
         return {p.stem for p in (self.root / prefix).glob("*.json")}
 
+    def iter_json(self, prefix: str) -> Iterable[dict]:
+        """Yield each JSON file under ``prefix`` parsed into a dict."""
+        for path in sorted((self.root / prefix).glob("*.json")):
+            yield json.loads(path.read_text())
+
     def describe(self) -> str:
         return f"local:{self.root}"
 
@@ -64,8 +89,8 @@ class GCSStore(OutputStore):
     """Reads/writes a GCS bucket. Source of truth in production.
 
     Besides the ``OutputStore`` text interface used by the scraper, it offers
-    JSON helpers (``iter_json``, ``write_json``, ``load_hashes``) consumed
-    by the ingest and weblinks jobs.
+    JSON helpers (``iter_json``, ``write_json``) consumed by the ingest and
+    weblinks jobs; ``load_hashes`` is inherited.
     """
 
     def __init__(self, bucket_name: str, prefix: str = "") -> None:
@@ -118,15 +143,3 @@ class GCSStore(OutputStore):
             content_type="application/json",
         )
 
-    def load_hashes(self, prefix: str, field: str = "page_hash") -> dict[str, str]:
-        """Map slug -> stored hash from prior records under ``prefix``.
-
-        Lets a source skip its expensive step (e.g. the Gemini extract call) when
-        the upstream content is unchanged since the last run.
-        """
-        hashes: dict[str, str] = {}
-        for record in self.iter_json(prefix):
-            slug, value = record.get("slug"), record.get(field)
-            if slug and value:
-                hashes[slug] = value
-        return hashes

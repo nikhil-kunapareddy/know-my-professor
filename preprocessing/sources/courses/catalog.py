@@ -14,6 +14,7 @@ import time
 import requests
 from bs4 import BeautifulSoup
 
+from ..base import content_hash
 from .config import (
     CATALOG_INDEX,
     COURSE_TITLE_RE,
@@ -88,7 +89,7 @@ class CatalogFetcher:
 
         desc_el = block.select_one("p.cb_desc")
         extras = [t for el in block.select("p.courseblockextra") if (t := CatalogFetcher._text(el))]
-        return {
+        record = {
             "code": f"{subject_code} {number}",
             # The ingest-side entity id; lowercase and unspaced so it is stable
             # whether the catalog writes "CS 1800" or "CS1800".
@@ -106,3 +107,14 @@ class CatalogFetcher:
             "requisites": extras,
             "url": url,
         }
+        # Fingerprints only the fields that reach a chunk, so a catalog page
+        # re-rendering its boilerplate does not look like a changed course.
+        # ``url`` is excluded deliberately: it names the subject page, not the
+        # course, and would flip if the catalog reorganised its paths.
+        record["record_hash"] = content_hash(
+            "\n".join([
+                record["code"], record["title"], record["credits"],
+                record["description"], *record["requisites"],
+            ])
+        )
+        return record

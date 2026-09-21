@@ -253,3 +253,99 @@ def test_display_name_flips_to_natural_order():
     # already-natural or malformed input must pass through, not be mangled
     assert BannerClient.display_to_name("Cher") == "Cher"
     assert BannerClient.display_to_name("") == ""
+
+
+# --- incremental re-runs ---------------------------------------------------
+
+
+class _MemStore:
+    """Minimal OutputStore standing in for a bucket."""
+
+    def __init__(self, records=None):
+        self.written: dict[str, str] = {}
+        self._records = records or []
+
+    def write_text(self, key, content):
+        self.written[key] = content
+
+    def read_text(self, key):
+        return self.written.get(key)
+
+    def existing_slugs(self, prefix):
+        return set()
+
+    def describe(self):
+        return "mem"
+
+    def iter_json(self, prefix):
+        return iter(self._records)
+
+
+def test_catalog_record_hash_ignores_the_subject_page_url():
+    """`url` names the subject page, not the course; a path change is not a change."""
+    html_a = '<div class="courseblock"><p class="courseblocktitle">CS 1100.  Topics.  (4 Hours)</p>' \
+             '<p class="cb_desc">Covers things at considerable length and in real detail.</p></div>'
+    a = CatalogFetcher.parse_courses(html_a, "cs", "https://a.example/cs/")[0]
+    b = CatalogFetcher.parse_courses(html_a, "cs", "https://b.example/other/")[0]
+    assert a["record_hash"] == b["record_hash"]
+
+
+def test_catalog_record_hash_changes_when_a_requisite_changes():
+    base = '<div class="courseblock"><p class="courseblocktitle">CS 1100.  Topics.  (4 Hours)</p>' \
+           '<p class="cb_desc">Covers things at considerable length and in real detail.</p>{}</div>'
+    a = CatalogFetcher.parse_courses(base.format(""), "cs")[0]
+    b = CatalogFetcher.parse_courses(
+        base.format('<p class="courseblockextra">Prerequisite(s): CS 1200</p>'), "cs"
+    )[0]
+    assert a["record_hash"] != b["record_hash"]
+
+
+def test_scrape_skips_a_course_whose_hash_is_unchanged():
+    """Without this the catalog is rewritten every month for no change at all."""
+    from preprocessing.sources.courses.runner import scrape
+
+    class _Fetcher:
+        def fetch_subject(self, subject):
+            return CatalogFetcher.parse_courses(SUBJECT_HTML, subject)
+
+    store = _MemStore()
+    written, unchanged, skipped = scrape(_Fetcher(), store, ["cs"])
+    # CS 2001's description is under MIN_DESCRIPTION_CHARS, so only CS 3800 stores
+    assert (written, unchanged, skipped) == (1, 0, 1)
+
+    prior = {r["slug"]: r["record_hash"] for r in CatalogFetcher.parse_courses(SUBJECT_HTML, "cs")}
+    store2 = _MemStore()
+    written, unchanged, skipped = scrape(_Fetcher(), store2, ["cs"], existing_hashes=prior)
+    assert (written, unchanged) == (0, 1)
+    assert store2.written == {}
+
+
+def test_schedule_hash_tracks_instructors_not_section_counts():
+    """A section count moving is not a teaching change and must not force a write."""
+    from preprocessing.sources.schedule.runner import schedule_hash
+
+    a = {"terms": [{"description": "Fall 2026", "instructors": ["B", "A"], "section_count": 3}]}
+    b = {"terms": [{"description": "Fall 2026", "instructors": ["A", "B"], "section_count": 9}]}
+    c = {"terms": [{"description": "Fall 2026", "instructors": ["A"], "section_count": 3}]}
+    assert schedule_hash(a) == schedule_hash(b)   # order + counts are noise
+    assert schedule_hash(a) != schedule_hash(c)   # a dropped instructor is not
+
+
+def test_local_store_supports_load_hashes_like_gcs():
+    """Local runs must exercise the same skip path the cloud job takes."""
+    import json as _json
+
+    from shared.gcs import LocalStore
+
+    def _make(tmp):
+        store = LocalStore(tmp)
+        store.write_text("courses/cs1.json", _json.dumps({"slug": "cs1", "record_hash": "h1"}))
+        store.write_text("courses/cs2.json", _json.dumps({"slug": "cs2", "record_hash": "h2"}))
+        return store
+
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.TemporaryDirectory() as tmp:
+        store = _make(Path(tmp))
+        assert store.load_hashes("courses/", "record_hash") == {"cs1": "h1", "cs2": "h2"}
