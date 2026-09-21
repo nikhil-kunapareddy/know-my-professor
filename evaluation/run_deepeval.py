@@ -1,10 +1,10 @@
-"""Judge the RAG system stage by stage with Ragas, against the golden set.
+"""Judge the RAG system stage by stage with DeepEval, against the golden set.
 
-    python -m evaluation.run_ragas --stage retrieval        # cheapest: no generation
-    python -m evaluation.run_ragas                          # all three stages
-    python -m evaluation.run_ragas --dump runs/today.jsonl  # record the run
-    python -m evaluation.run_ragas --from-dump runs/today.jsonl   # re-judge, no index
-    python -m evaluation.run_ragas --min faithfulness=0.8   # exit 1 below the bar
+    python -m evaluation.run_deepeval --stage retrieval        # cheapest: no generation
+    python -m evaluation.run_deepeval                          # all three stages
+    python -m evaluation.run_deepeval --dump runs/today.jsonl  # record the run
+    python -m evaluation.run_deepeval --from-dump runs/today.jsonl   # re-judge, no index
+    python -m evaluation.run_deepeval --min faithfulness=0.8   # exit 1 below the bar
 
 Which stage to run, and why:
 
@@ -37,10 +37,9 @@ import sys
 from dataclasses import replace
 from pathlib import Path
 
-from evaluation.harness import CaseOutcome, EvalReport, load_cases, sample_cases
-from evaluation.ragas_eval.metrics import SPECS, STAGE_ORDER, specs_for
-from evaluation.ragas_eval.samples import (
-    RagasSample,
+from evaluation.deepeval_eval.metrics import SPECS, STAGE_ORDER, specs_for
+from evaluation.deepeval_eval.samples import (
+    JudgedSample,
     SampleSet,
     cases_by_id,
     read_samples,
@@ -48,13 +47,14 @@ from evaluation.ragas_eval.samples import (
     sample_from_retrieval,
     write_samples,
 )
+from evaluation.harness import CaseOutcome, EvalReport, load_cases, sample_cases
 from shared.config import DEFAULT_TOP_K, MIN_RETRIEVAL_SCORE
 
 DEFAULT_GOLDEN = Path(__file__).parent / "golden.jsonl"
 
 #: Judge responses are cached here, keyed on the prompt. Gitignored: it is a
 #: cost optimisation, not a result.
-DEFAULT_CACHE_DIR = ".ragas_cache"
+DEFAULT_CACHE_DIR = ".deepeval_cache"
 
 
 def _parse_minimum(raw: str) -> tuple[str, float]:
@@ -104,7 +104,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--judge-model", default=None,
-        help="Judge model (default: a cheap one; see evaluation/ragas_eval/judge.py)",
+        help="Judge model (default: a cheap one; see evaluation/deepeval_eval/judge.py)",
     )
     parser.add_argument(
         "--concurrency", type=int, default=4, help="Judge calls in flight at once"
@@ -199,11 +199,13 @@ def _collect_live(cases, stages, args) -> SampleSet:
             failures.append(f"[{case.id}] {type(e).__name__}: {' '.join(str(e).split())[:160]}")
             print(f"  [{case.id}] FAILED — {failures[-1]}")
             sample_set.samples.append(
-                RagasSample(case_id=case.id, user_input=case.question, reference=case.reference)
+                JudgedSample(
+                    case_id=case.id, input=case.question, expected_output=case.reference
+                )
             )
             continue
         sample_set.samples.append(sample)
-        state = "no answer" if sample.no_answer else f"{len(sample.retrieved_contexts)} chunks"
+        state = "no answer" if sample.no_answer else f"{len(sample.retrieval_context)} chunks"
         print(f"  [{case.id}] {state}")
 
     if failures and len(failures) == len(cases):
@@ -230,7 +232,7 @@ def _rejoin_references(sample_set: SampleSet, cases) -> SampleSet:
             unknown.append(sample.case_id)
             rejoined.append(sample)
         else:
-            rejoined.append(replace(sample, reference=case.reference))
+            rejoined.append(replace(sample, expected_output=case.reference))
     if unknown:
         print(f"  note: {len(unknown)} dumped case(s) are not in the golden file: "
               f"{', '.join(unknown[:5])}")
@@ -245,7 +247,7 @@ def _baseline(cases, sample_set: SampleSet, top_k: int, min_score: float) -> str
         CaseOutcome(
             case=known[sample.case_id],
             retrieved_ids=list(sample.retrieved_ids),
-            answer=sample.response or None,
+            answer=sample.actual_output or None,
         )
         for sample in sample_set.samples
         if sample.case_id in known
@@ -296,7 +298,7 @@ def main() -> None:
             write_samples(args.dump, sample_set)
             print(f"  wrote {len(sample_set)} sample(s) to {args.dump}")
 
-    missing_reference = sum(1 for s in sample_set.samples if not s.reference)
+    missing_reference = sum(1 for s in sample_set.samples if not s.expected_output)
     if missing_reference and any(spec.needs_reference for spec in specs):
         print(
             f"  note: {missing_reference}/{len(sample_set)} case(s) have no reference; "
@@ -304,9 +306,14 @@ def main() -> None:
         )
 
     # Imported here so --help and a dry read of this file need no SDK or key.
-    from evaluation.ragas_eval.judge import DEFAULT_JUDGE_MODEL, build_judge, build_judge_embeddings
-    from evaluation.ragas_eval.metrics import build_metric
-    from evaluation.ragas_eval.runner import score
+    from evaluation.deepeval_eval.judge import (
+        DEFAULT_JUDGE_MODEL,
+        CachingJudge,
+        build_judge,
+        build_judge_embedder,
+    )
+    from evaluation.deepeval_eval.metrics import build_metric
+    from evaluation.deepeval_eval.runner import score
     from shared.settings import MissingSettingError
 
     cache_dir = None if args.no_cache else args.cache_dir
@@ -316,8 +323,8 @@ def main() -> None:
             if any(spec.needs_llm for spec in specs)
             else None
         )
-        embeddings = (
-            build_judge_embeddings() if any(spec.needs_embeddings for spec in specs) else None
+        embedder = (
+            build_judge_embedder() if any(spec.needs_embeddings for spec in specs) else None
         )
     except MissingSettingError as e:
         sys.exit(f"error: {e}")
@@ -328,7 +335,12 @@ def main() -> None:
         + (f", cache {cache_dir}" if cache_dir else ", cache off")
     )
 
-    metrics = [(spec, build_metric(spec, llm=judge, embeddings=embeddings)) for spec in specs]
+    # A factory per metric, not a metric: DeepEval metrics hold their result on
+    # the instance, so concurrent samples need one each. See runner.py.
+    metrics = [
+        (spec, (lambda s=spec: build_metric(s, llm=judge, embedder=embedder)))
+        for spec in specs
+    ]
     done = {"n": 0}
     total = len(sample_set) * len(metrics)
 
@@ -338,6 +350,9 @@ def main() -> None:
         print(f"  {done['n']:3}/{total} [{case_id}] {metric}{marker}")
 
     report = score(sample_set.samples, metrics, args.concurrency, progress)
+
+    if isinstance(judge, CachingJudge):
+        print(f"  judge cache: {judge.describe_cache()}")
 
     baseline = _baseline(cases, sample_set, top_k, sample_set.min_score or args.min_score)
     if baseline:
@@ -361,6 +376,7 @@ def main() -> None:
                  if s.timings_ms.get("generate")]
             ),
             "judge_model": args.judge_model or DEFAULT_JUDGE_MODEL,
+            "judge_framework": "deepeval",
             "concurrency": args.concurrency,
             "cache_dir": cache_dir,
             "from_dump": str(args.from_dump) if args.from_dump else None,

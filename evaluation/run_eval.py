@@ -15,7 +15,7 @@ provider's key with --generate).
 Scores what a slug list can score: was the right professor retrieved, how high
 up, and did the answer cite them. For the questions that need a judge — is the
 answer supported by the context, does it address the question, is it correct —
-see ``evaluation/run_ragas.py``.
+see ``evaluation/run_deepeval.py``.
 """
 
 from __future__ import annotations

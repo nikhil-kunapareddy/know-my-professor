@@ -3,25 +3,25 @@
 Two harnesses over one golden set. They answer different questions, and the
 second one costs money, so start with the first.
 
-| | `run_eval.py` | `run_ragas.py` |
+| | `run_eval.py` | `run_deepeval.py` |
 | --- | --- | --- |
 | Asks | was the right professor retrieved, and cited? | is the answer grounded, relevant, correct? |
-| Scores with | set arithmetic over slugs | an LLM judge (Ragas) |
-| Cost | one embed + one search per case | dozens of judge calls per case |
+| Scores with | set arithmetic over slugs | an LLM judge (DeepEval) |
+| Cost | one embed + one search per case | ~21 judge calls per case |
 | Needs | `PINECONE_API_KEY`, `MISTRAL_API_KEY` | + `ANTHROPIC_API_KEY`, the `eval` extra |
 
 ```bash
-pip install -e ".[eval]"                                  # ragas is not in requirements.txt
+pip install -e ".[eval]"                                  # deepeval is not in requirements.txt
 
 python -m evaluation.run_eval                             # recall@k / MRR
-python -m evaluation.run_ragas --stage retrieval          # judged, no generation
-python -m evaluation.run_ragas                            # all three stages
-python -m evaluation.run_ragas --dump evaluation/runs/$(date +%F).jsonl
-python -m evaluation.run_ragas --from-dump evaluation/runs/2026-09-17.jsonl
-python -m evaluation.run_ragas --min faithfulness=0.8 --min context_recall=0.7
+python -m evaluation.run_deepeval --stage retrieval       # judged, no generation
+python -m evaluation.run_deepeval                         # all three stages
+python -m evaluation.run_deepeval --dump evaluation/runs/$(date +%F).jsonl
+python -m evaluation.run_deepeval --from-dump evaluation/runs/2026-09-17.jsonl
+python -m evaluation.run_deepeval --min faithfulness=0.8 --min context_recall=0.7
 
 # a stored experiment: a reproducible random sample, saved with its settings
-python -m evaluation.run_ragas --sample 10 --seed 7 \
+python -m evaluation.run_deepeval --sample 10 --seed 7 \
   --dump evaluation/results/<dir>/samples.jsonl \
   --report-json evaluation/results/<dir>/report.json \
   --verbose | tee evaluation/results/<dir>/report.txt
@@ -44,86 +44,84 @@ Diagnoses the index, the embedding model, `top_k`, and `MIN_RETRIEVAL_SCORE`.
 - `context_relevance` — are the retrieved chunks about the question at all?
 - `context_precision` — are the useful ones ranked above the useless ones?
 - `context_recall` — does the context cover what the reference answer claims?
-- `context_entity_recall` — did the people/labs the answer needs get retrieved?
 
 **`generation`** — runs the real pipeline and judges the answer against the
 context it was actually given.
 
 - `faithfulness` — does the answer assert anything the context does not support?
-- `response_groundedness` — is the answer traceable to the context?
-- `context_utilization` — did the answer use the top-ranked chunks, or ignore them?
 - `answer_relevancy` — does it address the question, or pad around it?
 
 **`end_to_end`** — compares the answer to the golden reference.
 
-- `answer_correctness` — does it agree with the reference on the facts?
-- `semantic_similarity` — is it saying the same thing? (no judge, embeddings only)
-- `noise_sensitivity` — **lower is better**: how much do irrelevant retrieved
-  chunks corrupt an otherwise correct answer?
+- `answer_correctness` — does it agree with the reference on the facts? A
+  `GEval` metric with evaluation steps written for this corpus; the steps are
+  spelled out in `deepeval_eval/metrics.py` rather than generated per run, so
+  the yardstick does not move between runs.
+- `semantic_similarity` — is it saying the same thing? (no judge, embeddings
+  only — the one number in the report that is not an LLM's opinion)
+
+**Four metrics from the Ragas era are gone**, dropped rather than reinvented
+when this moved to DeepEval: `context_entity_recall` and `noise_sensitivity`
+(no equivalent), `response_groundedness` (faithfulness already covers it), and
+`context_utilization` (measured 2026-09-17 as reading 0.00 on any list-style
+answer, which is this product's main question shape). Numbers are therefore not
+comparable to runs stored before the port.
 
 Localising a regression is the point of the split: faithfulness down with
 `context_recall` flat is the generator's fault, both down together is the
 retriever's, and prompt work in the second case is wasted work.
 
-## What a run actually costs (measured, 2026-09-17)
+## What a run actually costs (measured, 2026-09-20)
 
-One real case (`crypto-secure-computation`, top_k=8) scored by all ten metrics,
-counted by wrapping both clients:
+One real case (`computing-on-encrypted-data`, top_k=8) scored by all seven
+metrics, counted by wrapping both clients:
 
 ```
-metric                      judge  embed   secs
-context_relevance               2      0    1.3
-context_precision               8      0   13.3
-context_recall                  1      0    2.4
-context_entity_recall           2      0    5.1
-faithfulness                    2      0    4.9
-response_groundedness           2      0    1.3
-context_utilization             8      0   13.9
-answer_relevancy                3      2    6.4
-answer_correctness              3      2   19.3
-semantic_similarity             0      2    4.0
-noise_sensitivity              19      0   62.4
-TOTAL per case                 50      6   134
+metric                   judge  embed     secs
+context_relevance            9      0      4.7
+context_precision            2      0      6.6
+context_recall               2      0      3.3
+faithfulness                 4      0      5.1
+answer_relevancy             3      0      4.1
+answer_correctness           1      0      2.2
+semantic_similarity          0      1      1.8
+TOTAL per case              21      1     27.7
 ```
 
-**Judge calls scale with `top_k`.** `context_precision` and
-`context_utilization` make one call *per retrieved chunk*
-(`for context in retrieved_contexts`), and `noise_sensitivity` runs
-faithfulness-style verdicts per chunk on top of a statement decomposition. The
-same case measured at 3 chunks cost 30 judge calls, not 50, so halving `--top-k`
-roughly halves the two precision metrics. Embedding calls do **not** scale with
-chunks: they come from question generation (`strictness=3`) and similarity, and
-stay at 6 per case.
+For scale, the same case under the previous Ragas harness cost **50 judge calls,
+6 embeds and 134 seconds** across eleven metrics. Most of the saving is
+structural rather than clever: `noise_sensitivity` alone was 19 judge calls and
+62 seconds, and `context_utilization` another 8.
 
-The rest of the count is claim decomposition (faithfulness splits the answer into
-atomic statements in one call, then judges them all in a second) and dual-judge
-averaging (`context_relevance`, `response_groundedness` each rate twice and mean
-the result).
+**Judge calls scale with `top_k`.** `context_relevance` makes one call per
+retrieved chunk plus one, so halving `--top-k` roughly halves it. The others are
+flat: `faithfulness` decomposes the answer into claims in one call and judges
+them in a second, `answer_correctness` is a single G-Eval call, and
+`semantic_similarity` never touches the judge at all.
 
-So the 60-case set, all three stages: **~3,000 judge requests, ~420 Mistral
-embedding requests** (360 judging + 60 query embeds), **60 Opus generations**,
-and roughly **40-50 minutes** wall clock at `--concurrency 4`.
+Extrapolating the 60-case set across all three stages: **~1,260 judge requests,
+~120 Mistral embedding requests** (60 similarity + 60 query embeds), **60 Opus
+generations**, and roughly **7-10 minutes** wall clock at `--concurrency 4`.
 
 Against the limits the providers themselves report:
 
 | Provider | Reported limit | This run | Verdict |
 | --- | --- | --- | --- |
-| Anthropic (judge + generation) | 20,000 req/min, 10M in / 2M out tokens per min | ~3,060 requests total | not close |
+| Anthropic (judge + generation) | 20,000 req/min, 10M in / 2M out tokens per min | ~1,320 requests total | not close |
 | Pinecone serverless free | generous for reads | 60 queries | not close |
-| **Mistral free tier** | **60 req/min** (`x-ratelimit-limit-req-minute`) | **~420 requests** | **the binding constraint** |
+| Mistral free tier | 60 req/min (`x-ratelimit-limit-req-minute`) | ~120 requests | comfortable, but paced anyway |
 
-Which is why `build_judge_embeddings` paces the judge embedder at
-`EMBED_RATE_LIMIT_SLEEP_SECONDS` (1s), the free tier's own ceiling — the same
-knob ingest uses. Unpaced, the embedding metrics collapse into 429 backoff.
+`build_judge_embedder` still paces the embedder at
+`EMBED_RATE_LIMIT_SLEEP_SECONDS` (1s), the free tier's own ceiling and the same
+knob ingest uses. It is no longer the binding constraint the way it was under
+Ragas — dropping from 6 embeds per case to 1 took ~420 requests down to ~120 —
+but pacing 120 requests costs two minutes and removes a whole class of flake.
 
 Two things worth knowing before you spend it:
 
-- `noise_sensitivity` alone is 19 of the 50 judge calls and 62 of the 134
-  seconds. Dropping `--stage end_to_end` removes it plus `answer_correctness`
-  and `semantic_similarity`: 28 judge calls and 2 embeds per case instead of 50
-  and 6, which cuts Mistral traffic from ~420 to ~180 requests.
-- `--stage retrieval` makes no embedding calls at all (4 metrics, 13 judge
-  calls per case) and never invokes the generator.
+- `--stage retrieval` is the cheap one: 13 of the 21 judge calls, no generator,
+  no embeddings, and it answers "is the right context even reaching the model?"
+- `--stage end_to_end` is the only stage that needs the embedder at all.
 
 ## Keeping it cheap
 
@@ -131,8 +129,11 @@ The zero-cost constraint applies here too, and a judged run is the one part of
 this repo that spends real quota:
 
 - `--stage retrieval` skips the generator entirely.
-- Judge responses are cached on disk in `.ragas_cache/` (gitignored), keyed on
-  the prompt — an unchanged re-run is nearly free, a changed pipeline re-judges.
+- Judge responses are cached on disk in `.deepeval_cache/` (gitignored), keyed
+  on the model, the prompt and the schema — an unchanged re-run is nearly free,
+  a changed pipeline re-judges. DeepEval has no cache on this path (its own is
+  for `deepeval test run`), so `CachingJudge` in `judge.py` adds one; a hit
+  reports a cost of 0.0, because it is one.
 - `--dump` records the retrieved contexts and answers; `--from-dump` re-judges
   that recording without touching Pinecone or the chat model. Iterate on
   metrics, thresholds, and reference answers this way.
@@ -142,6 +143,14 @@ this repo that spends real quota:
 - The judge defaults to a cheap model (`claude-haiku-4-5-*`). `--judge-model`
   overrides it, but absolute numbers shift between judges, so do not compare
   runs scored by different ones.
+- **A failed judge call is not cached, so re-running retries only the
+  failures.** Observed 2026-09-20: one metric-case pair in 35 died with
+  `DeepEvalError: Evaluation LLM outputted an invalid JSON`, failed again on an
+  immediate replay, and scored normally on a later attempt with the same cheap
+  judge. It is intermittent rather than a property of the case. The run is not
+  lost when it happens — the pair is recorded as an error, excluded from the
+  mean, and the shrunken denominator is printed next to it (`n=3`, not `n=4`) —
+  and `--from-dump` re-judges it for the price of that one call.
 
 ## The golden set
 
@@ -188,10 +197,14 @@ Three deliberate choices, explained in the file's own header:
 ## Adding cases and metrics
 
 A case is one JSON line in `golden.jsonl`; `reference` is optional but unlocks
-half the metrics. A metric is one row in `evaluation/ragas_eval/metrics.py`
-naming a Ragas class as `"module:ClassName"` — nothing else changes, and
-`tests/test_ragas_eval.py` then checks that the row's declared inputs match what
-that metric actually asks for.
+half the metrics. A metric is one row in `evaluation/deepeval_eval/metrics.py`
+naming a DeepEval class as `"module:ClassName"` — nothing else changes, and
+`tests/test_deepeval_eval.py` then checks that the row's declared inputs match
+what that metric actually asks for.
+
+For something DeepEval does not ship, write a `BaseMetric` subclass and name it
+the same way; `similarity.py` is the worked example, and it costs no judge
+calls at all.
 
 ## Layout
 
@@ -200,16 +213,39 @@ golden.jsonl        the questions, expected slugs, and reference answers
 harness.py          pure scoring: recall@k, MRR, section recall, citation precision
 live.py             builds the embedder/retriever/pipeline both runners measure
 run_eval.py         CLI: the non-LLM harness against the live index
-run_ragas.py        CLI: the judged harness, by stage
+run_deepeval.py     CLI: the judged harness, by stage
 plots.py            CLI: figures for a stored run (needs the [eval] extra)
 results/            stored runs, tracked in git — see results/README.md
-ragas_eval/
+deepeval_eval/
   samples.py        pure: golden case + pipeline output -> a judged record
   metrics.py        the stage -> metric table (lazy, by name)
-  judge.py          the judge LLM and embeddings — the only module needing keys
+  judge.py          the judge model and its disk cache — the only module needing keys
+  similarity.py     the one metric DeepEval lacks, on the corpus embedder
   runner.py         scores samples x metrics concurrently; records, never raises
   report.py         pure: aggregate, format, and gate
 ```
 
-Only `judge.py` imports Ragas at module scope, so everything that decides *what*
-gets scored is unit-tested offline with no SDK and no network.
+Only `judge.py`, `similarity.py` and `metrics.build_metric` import DeepEval, so
+everything that decides *what* gets scored is unit-tested offline with no SDK
+and no network — 52 of the 68 tests run with the extra uninstalled.
+
+## Three DeepEval wiring facts (hard-won; all three are silent or late failures)
+
+1. **Never pass `temperature` to the judge.** Anthropic's `Messages.create()`
+   rejects sampling parameters outright, and `AnthropicModel` forwards one if
+   it finds it — including from DeepEval's own `TEMPERATURE` env var.
+   `assert_no_temperature` fails at construction instead of on every call.
+2. **A metric built without `model=` is an OpenAI metric.** DeepEval resolves a
+   missing or string-valued model to `OpenAIModel` and fails deep inside the
+   metric on a missing `OPENAI_API_KEY`. There is no OpenAI key here by design,
+   so `build_metric` refuses up front.
+3. **`GEval._required_params` is a bare annotation, never assigned.** Reading it
+   yields a `typing` object rather than parameters; G-Eval's real inputs are the
+   `evaluation_params` it was built with. `required_fields` checks both, and a
+   test pins it.
+
+One more that is a design constraint rather than a bug: G-Eval scores through
+log probabilities when the judge is an OpenAI model and falls back to schema
+extraction otherwise, which is the path taken here — Anthropic returns no log
+probabilities. The fallback is supported upstream; the practical effect is that
+`answer_correctness` lands on coarser values than a GPT judge would give.
