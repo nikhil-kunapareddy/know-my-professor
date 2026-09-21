@@ -107,13 +107,18 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-# extend-exclude, NOT exclude: plain `exclude` replaces ruff's defaults, which
-# include build/ and dist/. Cloud Build installs non-editable (pip install
-# ".[ci]"), so setuptools leaves a full copy of the tree in build/lib — and
-# linting that copy fails the layering rule, whose per-file-ignores are
-# anchored to real paths like "serving/**". Local and GitHub runs never hit
-# this because requirements.txt installs editable.
-extend-exclude = [".venv", "data", "*.egg-info"]
+# build/ and dist/ are named EXPLICITLY, not left to ruff's defaults or to
+# .gitignore. Cloud Build installs non-editable (pip install ".[ci]"), so
+# setuptools leaves a full copy of the tree in build/lib, and linting that copy
+# fails the layering rule — its per-file-ignores are anchored to real paths like
+# "serving/**", which "build/lib/serving/**" does not match.
+#
+# Locally this is invisible: ruff respects .gitignore, which already lists
+# build/. `gcloud builds submit` does not upload .git, so inside Cloud Build
+# there is no repo, respect-gitignore cannot fire, and the copy gets linted —
+# 34 errors in code nobody wrote. Reproduce the CI behaviour with
+# `ruff check . --no-respect-gitignore`.
+extend-exclude = [".venv", "data", "*.egg-info", "build", "dist"]
 
 [tool.ruff.lint]
 # TID251 (banned-api) only, NOT TID252: relative imports within a package are
