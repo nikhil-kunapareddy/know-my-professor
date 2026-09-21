@@ -1,7 +1,13 @@
-"""The Khoury directory profile source: scraped profile JSON -> chunks.
+"""The faculty directory profile source: scraped profile JSON -> chunks.
 
-Profiles define the entity space (one professor per ``slug``); every other
-source hangs off the slugs this one produces.
+Profiles define the entity space (one professor per entity id); every other
+source hangs off the ids this one produces.
+
+Records from more than one college share this source, because a College of
+Science biography is still a biography -- minting per-college section keys
+would fork the taxonomy for no semantic gain, and the registry rejects a second
+source reusing these keys anyway. What must stay unique is the entity id, which
+``entity_id`` namespaces by college.
 """
 
 from __future__ import annotations
@@ -14,6 +20,7 @@ from ..base import (
     header_line,
     render_section,
 )
+from ..entities import college_of, entity_key
 
 #: Profile accordion sections, in the order they are emitted.
 PROFILE_SECTIONS: tuple[SectionSpec, ...] = (
@@ -34,6 +41,10 @@ class ProfileSource(Source):
     sections = PROFILE_SECTIONS
     depends_on_entities = False
 
+    def entity_id(self, record: dict) -> str | None:
+        """Globally unique id for a professor -- see ``..entities.entity_key``."""
+        return entity_key(record)
+
     def is_ingestable(self, record: dict) -> bool:
         """True if a profile has enough content to be worth ingesting.
 
@@ -53,6 +64,7 @@ class ProfileSource(Source):
         slug = record.get("slug")
         if not slug:
             return []
+        entity_id = self.entity_id(record)
 
         base_metadata = {
             "professor_slug": slug,
@@ -62,6 +74,11 @@ class ProfileSource(Source):
             "campuses": record.get("campuses") or [],
             "roles": record.get("roles") or [],
             "areas_of_interest": record.get("areas_of_interest") or [],
+            # Always present, even for records written before the field existed
+            # -- an upsert replaces metadata wholesale, so emitting it
+            # conditionally would let a later re-ingest silently strip the
+            # value the backfill put on the index.
+            "college": college_of(record),
         }
         # The header falls back to the slug, but the metadata name does not --
         # keeping both behaviours as-is preserves existing content hashes.
@@ -78,7 +95,7 @@ class ProfileSource(Source):
             text = render_section(header, spec.label, value)
             chunks.append(
                 Chunk(
-                    vector_id=f"{slug}#{spec.key}",
+                    vector_id=f"{entity_id}#{spec.key}",
                     text=text,
                     metadata={
                         **base_metadata,
