@@ -8,6 +8,13 @@ for a decision — "did this chunking change help?" — and that only works if t
 run it came from is still readable months later, alongside the settings that
 produced it.
 
+> **This folder is currently empty.** The four runs stored here were all
+> recorded under the Ragas harness and were deleted with it on 2026-09-20 —
+> their eleven metrics and their judge's rubric no longer match the seven
+> metrics `run_deepeval.py` scores, so keeping them would have invited
+> comparisons that do not hold. They remain in git history if a conclusion
+> needs its working shown. The layout below is the convention for the next run.
+
 ## What each run directory holds
 
 | file | what it is |
@@ -18,16 +25,16 @@ produced it.
 | `report.txt` | the console report as printed, for reading without a JSON viewer |
 | `plots/` | figures rendered from the JSON by `python -m evaluation.plots <dir>` |
 
-The two probe experiments (`-score-floor`, `-judge-call-cost`) store `data.json`
-instead of a report, since they measure the system rather than score it.
+A probe experiment that measures the system rather than scoring it (the score
+floor, say, or judge-call cost) stores `data.json` instead of a report.
 
 ## Comparing runs
 
 A directory whose subdirectories each hold a finished run is treated as a
 comparison — `python -m evaluation.plots <parent>` then draws the by-model
-figures instead of the single-run ones. `2026-09-17-llm-selection` is the
-worked example: one subdirectory per model, everything but the generator held
-fixed.
+figures instead of the single-run ones. Give it one subdirectory per model,
+with everything but the generator held fixed (`--chat-model` overrides that and
+nothing else, which is the point).
 
 ## Plots
 
@@ -49,17 +56,17 @@ drawn in a neutral so it never reads as a zero.
 comparable:
 
 ```bash
-python -m evaluation.run_ragas --sample 10 --seed 7 \
+python -m evaluation.run_deepeval --sample 10 --seed 7 \
   --dump evaluation/results/<dir>/samples.jsonl \
   --report-json evaluation/results/<dir>/report.json \
   --verbose | tee evaluation/results/<dir>/report.txt
 ```
 
 To re-judge a stored run without touching Pinecone or the chat model (free
-except for judge calls, and those are cached in `.ragas_cache/`):
+except for judge calls, and those are cached in `.deepeval_cache/`):
 
 ```bash
-python -m evaluation.run_ragas --from-dump evaluation/results/<dir>/samples.jsonl
+python -m evaluation.run_deepeval --from-dump evaluation/results/<dir>/samples.jsonl
 ```
 
 ## Why the sample is random, not the first N

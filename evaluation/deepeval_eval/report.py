@@ -1,6 +1,6 @@
 """Aggregating judged scores into something a decision can be made from.
 
-Pure: no Ragas, no network. Given a list of per-case, per-metric scores it
+Pure: no DeepEval, no network. Given a list of per-case, per-metric scores it
 produces the printed report and the pass/fail gate.
 
 The formatting choices are the substance of this module:
@@ -10,9 +10,12 @@ The formatting choices are the substance of this module:
   hides the denominator invites acting on one anyway.
 - **Skips and errors are printed, not swallowed.** They are the most common
   reason a number looks surprising (usually: the golden case has no reference).
-- **noise_sensitivity is flagged as inverted.** It is the one metric where high
-  is bad; printing it in the same column as the rest without saying so is how
-  someone "improves" it in the wrong direction.
+- **Inverted metrics are flagged as inverted.** ``LOWER_IS_BETTER`` is empty
+  today, since Ragas' ``noise_sensitivity`` had no DeepEval equivalent. The
+  handling stays because printing a metric where high is bad in the same column
+  as the rest, without saying so, is how someone "improves" it in the wrong
+  direction — and the first such metric should not be able to arrive without
+  it.
 """
 
 from __future__ import annotations
@@ -61,7 +64,7 @@ class MetricSummary:
 
 
 @dataclass
-class RagasReport:
+class JudgeReport:
     """Every score from one run, plus the aggregates over them."""
 
     scores: list[MetricScore] = field(default_factory=list)

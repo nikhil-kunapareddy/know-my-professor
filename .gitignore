@@ -35,7 +35,9 @@ env/
 # The judge cache is a cost optimisation, and runs/ is for throwaway dumps.
 # evaluation/results/ is deliberately NOT ignored: a stored result is evidence
 # for a decision and has to stay readable next to the settings that produced it.
-.ragas_cache/
+.deepeval_cache/
+.deepeval
+.deepeval-cache.json
 /evaluation/runs/
 
 # setuptools artifacts from a non-editable `pip install .`

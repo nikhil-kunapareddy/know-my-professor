@@ -3,7 +3,7 @@
 Both runners need the same thing: the embedder, the retriever, and — when an
 answer is needed — the pipeline, wired exactly the way ``serving/api`` wires
 them. Building that twice is how an eval quietly stops measuring production, so
-it is built once here and imported by ``run_eval`` and ``run_ragas`` alike.
+it is built once here and imported by ``run_eval`` and ``run_deepeval`` alike.
 
 Nothing in this module reads a flag or prints: it turns settings into objects,
 which is what makes both CLIs thin.
