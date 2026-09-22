@@ -11,6 +11,17 @@ from shared.config import FETCH_BATCH_SIZE, UPSERT_BATCH_SIZE
 from ..sources.base import Chunk
 
 
+def _ns(namespace: str | None) -> dict:
+    """Namespace kwarg, omitted when unset.
+
+    Passing ``namespace=None`` explicitly is not the same as omitting it on
+    every Pinecone client version, and the professor corpus lives in the
+    default namespace -- so an accidental ``""`` would silently write a second,
+    empty partition instead of failing.
+    """
+    return {"namespace": namespace} if namespace else {}
+
+
 class PineconeStore:
     """Wraps a Pinecone index for hash-aware, batched upserts."""
 
@@ -63,7 +74,7 @@ class PineconeStore:
                 f"embedding model."
             )
 
-    def fetch_existing_hashes(self, ids: list[str]) -> dict[str, str]:
+    def fetch_existing_hashes(self, ids: list[str], namespace: str | None = None) -> dict[str, str]:
         """Map vector_id -> stored content_hash for the given IDs already present.
 
         IDs not present (or lacking a content_hash) are simply absent from the
@@ -74,7 +85,7 @@ class PineconeStore:
         unique = list(dict.fromkeys(ids))
         for i in range(0, len(unique), FETCH_BATCH_SIZE):
             batch = unique[i : i + FETCH_BATCH_SIZE]
-            resp = self.index.fetch(ids=batch)
+            resp = self.index.fetch(ids=batch, **_ns(namespace))
             vectors = getattr(resp, "vectors", None) or {}
             for vid, vec in vectors.items():
                 meta = getattr(vec, "metadata", None) or {}
@@ -83,7 +94,9 @@ class PineconeStore:
                     hashes[vid] = stored
         return hashes
 
-    def upsert_in_batches(self, chunks: list[Chunk], vectors: list[list[float]]) -> None:
+    def upsert_in_batches(
+        self, chunks: list[Chunk], vectors: list[list[float]], namespace: str | None = None
+    ) -> None:
         """Upsert chunk+vector pairs in batches of UPSERT_BATCH_SIZE.
 
         ``strict=True`` because a short vector list would otherwise zip away the
@@ -95,4 +108,4 @@ class PineconeStore:
             for c, v in zip(chunks, vectors, strict=True)
         ]
         for i in range(0, len(payload), UPSERT_BATCH_SIZE):
-            self.index.upsert(vectors=payload[i : i + UPSERT_BATCH_SIZE])
+            self.index.upsert(vectors=payload[i : i + UPSERT_BATCH_SIZE], **_ns(namespace))

@@ -21,8 +21,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import threading
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict
 
@@ -30,6 +28,7 @@ from shared.config import gcs_bucket
 from shared.gcs import GCSStore, LocalStore, OutputStore
 
 from ..entities import DEFAULT_COLLEGE
+from ..pacing import Pacer
 from .config import COLLEGES, COLLEGES_BY_KEY, LOCAL_OUTPUT_DIR, College
 from .fetcher import DirectoryFetcher
 from .llm_parser import LlmProfileParser, ThinProfilePage
@@ -41,28 +40,6 @@ from .source import ProfileSource
 #: slow half for llm-parsed colleges. Anthropic allows thousands of requests per
 #: minute, so the ceiling here is politeness to the directory, not the API.
 DEFAULT_WORKERS = 8
-
-
-class _Pacer:
-    """Serializes fetches to one host, holding ``delay`` between them.
-
-    A plain ``sleep`` inside each worker would let N workers hit the directory
-    at once and merely stagger the next round. Holding the lock across the sleep
-    is what actually caps the rate at one request per ``delay``, no matter how
-    many workers are running.
-    """
-
-    def __init__(self, delay: float):
-        self.delay = delay
-        self._lock = threading.Lock()
-        self._next_at = 0.0
-
-    def wait(self) -> None:
-        with self._lock:
-            now = time.monotonic()
-            if now < self._next_at:
-                time.sleep(self._next_at - now)
-            self._next_at = time.monotonic() + self.delay
 
 
 class ProfileScraper:
@@ -104,7 +81,7 @@ class ProfileScraper:
         if not pending:
             return 0, 0
 
-        pacer = _Pacer(self.college.crawl_delay)
+        pacer = Pacer(self.college.crawl_delay)
         written = failed = 0
         with ThreadPoolExecutor(max_workers=self.workers) as pool:
             futures = {pool.submit(self._scrape_one, url, pacer): url for url in pending}
@@ -123,7 +100,7 @@ class ProfileScraper:
                     print(f"  [{i}/{len(pending)}] {name}")
         return written, failed
 
-    def _scrape_one(self, url: str, pacer: _Pacer) -> str:
+    def _scrape_one(self, url: str, pacer: Pacer) -> str:
         """Fetch (paced) and parse (concurrent) one profile, then store it."""
         pacer.wait()
         html = self.fetcher.fetch(url)

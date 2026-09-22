@@ -42,12 +42,20 @@ and skip instead. 52 of the 68 tests in `test_deepeval_eval.py` run without it.
   entity ids through the same `sources/entities.py` helper: if they disagreed,
   a College of Science professor's website would enrich the Khoury professor
   with the same slug.
+- `test_courses.py` — the course corpus (catalog + term schedule): catalog parsing (title/credits/requisites,
+  non-breaking spaces, unreadable blocks), entity ids that cannot collide with
+  professor slugs, and the **namespace** rules — that both course sources share
+  one namespace, that people stay in the default one, that the registry rejects a
+  dependent source alone in a namespace, that `_collect_chunks` groups by
+  namespace, and that `RAGPipeline` passes it through. Namespace bugs never
+  raise; they silently return nothing or write to the wrong partition.
 - `test_ingest.py` — per-source chunk rendering, registry invariants (duplicate
   section keys / prefixes rejected), `_collect_chunks` over the registry
   (entity scoping, `--limit` semantics, stale-enrichment skip), and
   `PineconeStore.fetch_existing_hashes` batching + the re-embed rule.
 - `test_chunk_golden.py` — **the re-ingest guard.** Pins chunk text and metadata
-  byte-for-byte against `fixtures/chunk_golden.json`. Chunk text is hashed into
+  byte-for-byte against `fixtures/chunk_golden.json`, walking the registry so a
+  new source needs fixtures, not edits here. Chunk text is hashed into
   `content_hash`, which decides whether ingest re-embeds, so any rendering change
   silently invalidates the index. If this fails, either the change was
   unintended, or it was intended and the index owes you a full re-ingest.
@@ -86,17 +94,18 @@ Only when a rendering change is intentional — and it means a full re-ingest:
 ```bash
 .venv/bin/python - <<'PY'
 import json, pathlib
-from preprocessing.sources.registry import chunks_for, get_source
+from preprocessing.sources.registry import SOURCES, chunks_for
 fx = json.loads(pathlib.Path("tests/fixtures/source_records.json").read_text())
 dump = lambda cs: [{"vector_id": c.vector_id, "text": c.text, "metadata": c.metadata} for c in cs]
-golden = {
-    "profiles": [{"slug": r.get("slug"),
-                  "is_substantive": get_source("profiles").is_ingestable(r),
-                  "chunks": dump(chunks_for("profiles", r))} for r in fx["profiles"]],
-    "weblinks": [{"slug": r.get("slug"),
-                  "chunks": dump(chunks_for("weblinks", r))} for r in fx["weblinks"]],
-}
+golden = {}
+for source in SOURCES:
+    entries = []
+    for r in fx[source.name]:
+        entry = {"slug": r.get("slug"), "chunks": dump(chunks_for(source.name, r))}
+        if source.name == "profiles":
+            entry["is_substantive"] = source.is_ingestable(r)
+        entries.append(entry)
+    golden[source.name] = entries
 pathlib.Path("tests/fixtures/chunk_golden.json").write_text(
     json.dumps(golden, indent=2, ensure_ascii=False, sort_keys=True) + "\n")
-PY
 ```
