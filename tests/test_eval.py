@@ -15,8 +15,10 @@ from evaluation.harness import (
     section_of,
     slug_of,
 )
+from shared.config import COURSES_NAMESPACE, PEOPLE_NAMESPACE
 
 GOLDEN = Path(__file__).parent.parent / "evaluation" / "golden.jsonl"
+RERANK_QUESTIONS = Path(__file__).parent.parent / "evaluation" / "rerank" / "questions.jsonl"
 
 
 def _case(expected=("ann",), sections=()) -> EvalCase:
@@ -387,3 +389,53 @@ def test_a_prefix_would_have_missed_the_refusals():
         "the first ten cases contain no refusal, so --limit 10 cannot measure one"
     )
     assert any(c.expect_no_answer for c in sample_cases(cases, 20, seed=0))
+
+
+# --- namespace semantics: absent vs explicit null --------------------------
+
+
+def test_a_case_omitting_namespace_still_means_people():
+    """The 60 original golden cases predate namespaces and omit the field."""
+    case = EvalCase.from_dict({"id": "c", "question": "q?", "expected_slugs": ["a"]})
+    assert case.namespace == PEOPLE_NAMESPACE
+
+
+def test_an_explicit_null_namespace_means_search_them_all():
+    """Distinct from an absent key, which defaults to people.
+
+    raw.get() collapses the two, so this is read by key presence. Without the
+    distinction a blended case silently becomes a people case and scores a miss
+    on every course chunk it needed — the blended path stays unmeasurable.
+    """
+    case = EvalCase.from_dict(
+        {"id": "c", "question": "q?", "expected_slugs": ["a"], "namespace": None}
+    )
+    assert case.namespace is None
+
+
+def test_the_rerank_question_set_matches_the_corpus_it_measures():
+    """golden.jsonl is 60/3 people-to-courses against a 27/73 corpus.
+
+    Measuring a reranker on it would score almost entirely the smaller half.
+    This set is assembled to the real split, and the check is here so a later
+    edit cannot quietly unbalance it again.
+    """
+    cases = load_cases(RERANK_QUESTIONS)
+    assert len(cases) == 60
+
+    people = [c for c in cases if c.namespace == PEOPLE_NAMESPACE]
+    courses = [c for c in cases if c.namespace == COURSES_NAMESPACE]
+    blended = [c for c in cases if c.namespace is None]
+    assert (len(people), len(courses), len(blended)) == (14, 36, 10)
+
+    # Narrow questions are what a cutoff should help most (course precision at
+    # k=11 is 15.2%); a set of only broad ones would hide that entirely.
+    strata = [c.id.split("-")[1] for c in cases]
+    assert {"broad", "narrow", "noans", "blended"} <= set(strata)
+    assert sum(1 for c in cases if c.expect_no_answer) == 8
+
+    # Every blended case must genuinely need both corpora, or it is not
+    # exercising the path it was added for.
+    for case in blended:
+        assert any(s.startswith("course-") for s in case.expected_slugs), case.id
+        assert any(not s.startswith("course-") for s in case.expected_slugs), case.id
