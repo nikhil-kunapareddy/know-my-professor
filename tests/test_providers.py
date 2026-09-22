@@ -76,19 +76,37 @@ class _FakeBlock:
         self.text = text
 
 
+class _FakeUsage:
+    def __init__(self, input_tokens=0, output_tokens=0):
+        self.input_tokens, self.output_tokens = input_tokens, output_tokens
+
+
 class _FakeMessages:
-    def __init__(self, blocks, stop_reason="end_turn"):
+    def __init__(self, blocks, stop_reason="end_turn", usage=None, refusal_category=None):
         self._blocks, self._stop_reason = blocks, stop_reason
+        self._usage = usage
+        # The real response carries stop_details ONLY on a refusal and None
+        # otherwise, so the fake must too or the guard goes untested.
+        self._details = (
+            type("D", (), {"category": refusal_category})()
+            if stop_reason == "refusal"
+            else None
+        )
         self.kwargs: dict | None = None
 
     def create(self, **kwargs):
         self.kwargs = kwargs
-        return type("R", (), {"content": self._blocks, "stop_reason": self._stop_reason})()
+        return type("R", (), {
+            "content": self._blocks,
+            "stop_reason": self._stop_reason,
+            "stop_details": self._details,
+            "usage": self._usage,
+        })()
 
 
 class _FakeAnthropic:
-    def __init__(self, blocks, stop_reason="end_turn"):
-        self.messages = _FakeMessages(blocks, stop_reason)
+    def __init__(self, blocks, stop_reason="end_turn", usage=None, refusal_category=None):
+        self.messages = _FakeMessages(blocks, stop_reason, usage, refusal_category)
 
 
 def test_anthropic_generate_joins_text_and_drops_thinking_blocks():
@@ -99,14 +117,63 @@ def test_anthropic_generate_joins_text_and_drops_thinking_blocks():
         _FakeBlock("text", " Also Amal Ahmed [2]."),
     ])
 
-    answer = AnthropicGenerator(client=client).generate("sys", "who does PL?")
-    assert answer == "Jan Vitek works on PL [1]. Also Amal Ahmed [2]."
+    result = AnthropicGenerator(client=client).generate("sys", "who does PL?")
+    assert result.text == "Jan Vitek works on PL [1]. Also Amal Ahmed [2]."
 
 
 def test_anthropic_generate_treats_a_refusal_as_no_answer():
     """A refusal is a 200 with stop_reason, not an exception; "" hits NO_ANSWER."""
     client = _FakeAnthropic([], stop_reason="refusal")
-    assert AnthropicGenerator(client=client).generate("sys", "q") == ""
+    assert AnthropicGenerator(client=client).generate("sys", "q").text == ""
+
+
+def test_anthropic_generate_records_a_refusal_rather_than_only_blanking_it():
+    """A safety decline must stay distinguishable from an honest empty answer.
+
+    Both reach the pipeline as no text and both become the no-answer string, so
+    without this the two are the same event downstream — which would score a
+    refusal as a correct "I don't have that information".
+    """
+    client = _FakeAnthropic([], stop_reason="refusal", refusal_category="cyber")
+    result = AnthropicGenerator(client=client).generate("sys", "q")
+
+    assert result.text == ""
+    assert result.refused is True
+    assert result.refusal_category == "cyber"
+
+    quiet = _FakeAnthropic([_FakeBlock("text", "")])
+    assert quiet.messages  # the empty-answer case is NOT a refusal
+    assert AnthropicGenerator(client=quiet).generate("sys", "q").refused is False
+
+
+def test_anthropic_generate_reports_token_usage():
+    """output_tokens is the billed figure and includes thinking; cost needs it."""
+    client = _FakeAnthropic(
+        [_FakeBlock("thinking", "..."), _FakeBlock("text", "short answer")],
+        usage=_FakeUsage(input_tokens=5272, output_tokens=1600),
+    )
+    result = AnthropicGenerator(client=client).generate("sys", "q")
+
+    assert (result.input_tokens, result.output_tokens) == (5272, 1600)
+    assert result.truncated is False
+
+
+def test_anthropic_generate_flags_a_truncated_answer():
+    """max_tokens is a measurement failure that otherwise scores as a bad answer."""
+    client = _FakeAnthropic([_FakeBlock("text", "cut off mid-")], stop_reason="max_tokens")
+    result = AnthropicGenerator(client=client).generate("sys", "q")
+
+    assert result.truncated is True
+    assert result.refused is False
+    assert result.refusal_category is None
+
+
+def test_anthropic_generate_tolerates_a_response_without_usage():
+    """Usage must never be required: a missing field reads 0, not an AttributeError."""
+    result = AnthropicGenerator(client=_FakeAnthropic([_FakeBlock("text", "hi")])).generate(
+        "sys", "q"
+    )
+    assert (result.input_tokens, result.output_tokens) == (0, 0)
 
 
 def test_anthropic_generate_never_sends_sampling_params():

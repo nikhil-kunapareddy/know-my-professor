@@ -57,19 +57,29 @@ class LiveSystem:
         min_score: float,
         chat_provider: str | None = None,
         chat_model: str | None = None,
+        effort: str | None = None,
     ) -> RAGPipeline:
         """The full pipeline, including the chat provider the settings name.
 
-        The two overrides exist for model-selection experiments: everything else
+        The overrides exist for model-selection experiments: everything else
         — index, embedder, top_k, floor, prompt — is held fixed, so a difference
         in the scores is a difference between the models and not between runs.
+
+        ``effort`` is forwarded only when given, because it is an Anthropic-only
+        parameter and ``LlamaGenerator.__init__`` would raise ``TypeError`` on it.
+        Note that a model outside the Claude 5 family silently drops it
+        (``supports_effort``), so an arm labelled with an effort it cannot accept
+        would be mislabelled rather than rejected — Claude Haiku 4.5 is the case
+        that matters.
         """
+        options: dict[str, object] = {"model": chat_model or self.settings.chat_model}
+        if effort is not None:
+            options["effort"] = effort
         return RAGPipeline(
             embedder=self.embedder,
             retriever=self.retriever,
             generator=build_generator(
-                chat_provider or self.settings.chat_provider,
-                model=chat_model or self.settings.chat_model,
+                chat_provider or self.settings.chat_provider, **options
             ),
             top_k=top_k,
             min_score=min_score,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from core.llm.base import Generation
 from core.llm.prompts import PromptBuilder
 from core.pipeline import NO_ANSWER, RAGPipeline
 from core.retrieval.base import RetrievalResult
@@ -38,7 +39,7 @@ class _FakeGenerator:
 
     def generate(self, system_instruction, user_message):
         self.last_user_message = user_message
-        return self.answer
+        return Generation(text=self.answer, input_tokens=5272, output_tokens=420)
 
 
 def _result(slug, name, score=0.9):

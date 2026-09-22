@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import os
 
-from .base import Generator
+from .base import Generation, Generator
 
 #: /chat runs under REQUEST_BUDGET_SECONDS (45s by default), and answering
 #: "who works on X" from eight retrieved chunks is not a reasoning-heavy task.
@@ -85,11 +85,18 @@ class AnthropicGenerator(Generator):
             self._client = anthropic.Anthropic(api_key=key)
         return self._client
 
-    def generate(self, system_instruction: str, user_message: str) -> str:
-        """Return the model's answer text (empty string if the model returns none).
+    def generate(self, system_instruction: str, user_message: str) -> Generation:
+        """Return the model's answer text and its accounting.
 
         A refusal arrives as a 200 with ``stop_reason == "refusal"``, not as an
         exception, so it is checked explicitly; "" is the pipeline's no-answer case.
+        The refusal is now *recorded* rather than only flattened to "", because a
+        safety decline and an honest "I don't have that information" are otherwise
+        indistinguishable downstream.
+
+        No ``fallbacks`` parameter is set. Server-side fallback would silently
+        re-run a declined request on another model and return it under this
+        model's name, which would corrupt any per-model measurement.
         """
         options = {"output_config": {"effort": self.effort}} if self.effort else {}
         response = self.client.messages.create(
@@ -100,10 +107,24 @@ class AnthropicGenerator(Generator):
             **options,
         )
 
-        if getattr(response, "stop_reason", None) == "refusal":
-            return ""
+        stop_reason = getattr(response, "stop_reason", None)
+        # stop_details is populated ONLY when stop_reason is "refusal" and is
+        # None for every other stop reason, so it must be guarded before reading.
+        details = getattr(response, "stop_details", None)
+        usage = getattr(response, "usage", None)
 
-        # content interleaves thinking and text blocks; only the latter is answer.
-        return "".join(
-            block.text for block in response.content if block.type == "text"
-        ).strip()
+        if stop_reason == "refusal":
+            text = ""
+        else:
+            # content interleaves thinking and text blocks; only the latter is answer.
+            text = "".join(
+                block.text for block in response.content if block.type == "text"
+            ).strip()
+
+        return Generation(
+            text=text,
+            input_tokens=getattr(usage, "input_tokens", 0) or 0,
+            output_tokens=getattr(usage, "output_tokens", 0) or 0,
+            stop_reason=stop_reason,
+            refusal_category=getattr(details, "category", None),
+        )

@@ -15,7 +15,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
-from core.llm.base import Generator
+from core.llm.base import Generation, Generator
 from core.llm.prompts import SYSTEM_INSTRUCTION, PromptBuilder
 from core.retrieval.base import RetrievalResult, Retriever
 from shared.config import DEFAULT_TOP_K, MIN_RETRIEVAL_SCORE
@@ -49,6 +49,12 @@ class RAGResult:
     sources: list[RetrievalResult] = field(default_factory=list)
     retrieved: int = 0
     timings_ms: dict[str, float] = field(default_factory=dict)
+    #: The provider's own record of the call — tokens, stop reason, refusal
+    #: category. ``None`` when the floor rejected everything and no model was
+    #: called. Carried here so a model-selection experiment reads usage through
+    #: the same pipeline serving uses, rather than calling a provider directly
+    #: and measuring something production never runs.
+    generation: Generation | None = None
 
 
 class RAGPipeline:
@@ -121,13 +127,23 @@ class RAGPipeline:
 
         user_message = self.prompt_builder.build_user_message(question, relevant)
         with _timed(timings, "generate"):
-            answer = self.generator.generate(SYSTEM_INSTRUCTION, user_message)
+            generation = self.generator.generate(SYSTEM_INSTRUCTION, user_message)
 
-        if not answer:
-            return RAGResult(answer=NO_ANSWER, retrieved=len(results), timings_ms=timings)
+        # A refusal and an empty answer both arrive as no text and both become
+        # the no-answer string, which is the right behaviour for a caller. The
+        # generation record is attached either way so the two remain telling
+        # apart upstream.
+        if not generation.text:
+            return RAGResult(
+                answer=NO_ANSWER,
+                retrieved=len(results),
+                timings_ms=timings,
+                generation=generation,
+            )
         return RAGResult(
-            answer=answer,
+            answer=generation.text,
             sources=relevant,
             retrieved=len(results),
             timings_ms=timings,
+            generation=generation,
         )
