@@ -83,6 +83,14 @@ class LiveSystem:
             ),
             top_k=top_k,
             min_score=min_score,
+            # Must match serving/api/app.py. Omitting it left RAGPipeline on its
+            # (None,) default -- the unnamed partition, which has been EMPTY
+            # since the people vectors moved into `people`. The bug was latent
+            # only because run_eval always passes namespace=case.namespace,
+            # which overrides this; the first caller to use the blended path
+            # retrieved nothing and raised nothing, exactly the failure mode
+            # CLAUDE.md warns about for a namespace mismatch.
+            namespaces=self.settings.namespaces,
         )
 
 

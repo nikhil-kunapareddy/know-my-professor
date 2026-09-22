@@ -46,3 +46,6 @@ dist/
 
 # Local copy of the raw GCS corpus, pulled for offline golden-set harvesting.
 .corpus/
+
+# Judge/ground-truth call cache for the model-selection experiment.
+.selectllm_cache/

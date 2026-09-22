@@ -8,6 +8,8 @@ vectors, and score every arm as wrong for a reason unrelated to the model.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from evaluation.selectllm import harvest
@@ -101,7 +103,56 @@ def test_cases_file_is_well_formed():
             assert len(case.expected_slugs) >= 5
 
 
-def test_loading_for_a_run_refuses_unwritten_ground_truth():
-    """The grid must never be ranked against an empty oracle."""
+def test_loading_for_a_run_refuses_unwritten_ground_truth(tmp_path):
+    """The grid must never be ranked against an empty oracle.
+
+    Uses its own fixture rather than the committed cases.jsonl: that file now
+    has ground truth, so asserting against it would only prove the file's
+    current state and would stop testing the guard.
+    """
+    unwritten = tmp_path / "cases.jsonl"
+    unwritten.write_text(json.dumps({
+        "id": "lookup-someone",
+        "question": "What does someone research?",
+        "stratum": "lookup",
+        "kind": "prose",
+        "ground_truth": "",
+        "expected_slugs": ["someone"],
+        "source_facts": "NAME: Someone",
+    }) + "\n")
+
+    assert load(unwritten, allow_unwritten=True)[0].ground_truth == ""
     with pytest.raises(ValueError, match="no ground truth"):
-        load()
+        load(unwritten)
+
+
+def test_committed_cases_all_have_ground_truth():
+    """The set as shipped is runnable: every case has an oracle."""
+    for case in load():
+        assert case.ground_truth.strip()
+
+
+def test_live_pipeline_searches_the_same_namespaces_as_serving():
+    """The eval harness must not diverge from serving on the namespace set.
+
+    ``live.pipeline()` omitted ``namespaces``, leaving RAGPipeline on its
+    ``(None,)`` default -- the unnamed partition, empty since the people vectors
+    were moved into ``people``. Nothing raised: a namespace mismatch returns no
+    rows. It stayed hidden because ``run_eval`` always passes an explicit
+    ``namespace=``, so the blended path was never exercised.
+    """
+    from unittest.mock import Mock
+
+    from evaluation.live import LiveSystem
+    from shared.settings import ApiSettings
+
+    settings = ApiSettings(
+        pinecone_api_key="k", index_name="i", namespaces=("people", "courses"),
+        embed_provider="mistral", chat_provider="anthropic", chat_model=None,
+        top_k=11, min_score=0.35,
+    )
+    system = LiveSystem(settings=settings, embedder=Mock(dim=1024), retriever=Mock())
+    pipeline = system.pipeline(top_k=11, min_score=0.35, chat_model="claude-opus-5")
+
+    assert pipeline.namespaces == settings.namespaces
+    assert None not in pipeline.namespaces
