@@ -33,20 +33,28 @@ def _dump(chunks) -> list[dict]:
     return [{"vector_id": c.vector_id, "text": c.text, "metadata": c.metadata} for c in chunks]
 
 
-def test_profile_chunks_match_golden(records, golden):
-    from preprocessing.sources.registry import chunks_for
+def test_every_registered_source_has_fixtures(records):
+    """A new source must bring fixtures, or it is pinned by nothing."""
+    from preprocessing.sources.registry import SOURCES
 
-    for record, expected in zip(records["profiles"], golden["profiles"], strict=True):
-        assert record.get("slug") == expected["slug"]
-        assert _dump(chunks_for("profiles", record)) == expected["chunks"]
+    missing = sorted({s.name for s in SOURCES} - set(records) - {"_comment"})
+    assert not missing, f"registered source(s) with no fixture records: {missing}"
 
 
-def test_weblinks_chunks_match_golden(records, golden):
-    from preprocessing.sources.registry import chunks_for
+def test_chunks_match_golden(records, golden):
+    """Every source's rendering, pinned byte-for-byte.
 
-    for record, expected in zip(records["weblinks"], golden["weblinks"], strict=True):
-        assert record.get("slug") == expected["slug"]
-        assert _dump(chunks_for("weblinks", record)) == expected["chunks"]
+    Walks the registry rather than naming sources, for the same reason ingest
+    does: adding a corpus should not mean editing this file.
+    """
+    from preprocessing.sources.registry import SOURCES, chunks_for
+
+    for source in SOURCES:
+        name = source.name
+        assert name in golden, f"no golden entries for source {name!r}"
+        for record, expected in zip(records[name], golden[name], strict=True):
+            assert record.get("slug") == expected["slug"], name
+            assert _dump(chunks_for(name, record)) == expected["chunks"], name
 
 
 def test_substantive_filter_matches_golden(records, golden):
@@ -63,7 +71,7 @@ def test_golden_covers_every_registered_section_type(golden):
 
     seen = {
         c["metadata"]["section_type"]
-        for group in (golden["profiles"], golden["weblinks"])
+        for group in golden.values()
         for entry in group
         for c in entry["chunks"]
     }

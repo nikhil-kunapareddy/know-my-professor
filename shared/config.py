@@ -41,6 +41,19 @@ PINECONE_DEFAULT_REGION = "us-east-1"
 UPSERT_BATCH_SIZE = 100
 FETCH_BATCH_SIZE = 100
 
+# The namespace holding the people corpus (profiles + weblinks). It lives here,
+# not on the Source, because BOTH ends must name the same partition: ingest
+# writes it and /chat reads it. A mismatch is silent -- the query succeeds
+# against an empty partition and every answer becomes the no-answer string --
+# so the string exists once rather than twice.
+#
+# "people", not "professors": the directories call postdocs, PhD students and
+# staff "faculty" too, and the corpus keeps whoever has substantive content.
+#
+# The course namespace stays in ``preprocessing/sources/courses``: nothing in
+# serving routes to it yet. Move it here when serving needs to name it.
+PEOPLE_NAMESPACE = "people"
+
 # --- Generation / retrieval (core) -----------------------------------------
 
 # Which Generator the /chat service builds when CHAT_PROVIDER is unset. The

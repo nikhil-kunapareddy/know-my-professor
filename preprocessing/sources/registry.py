@@ -15,12 +15,18 @@ from __future__ import annotations
 from collections import Counter
 
 from .base import Chunk, Source
+from .courses.source import CourseSource
 from .profiles.source import ProfileSource
+from .schedule.source import ScheduleSource
 from .weblinks.source import WeblinksSource
 
+#: Order matters only in that entity-defining sources must be able to run
+#: first; ``entity_sources()`` handles that, so this is just reading order.
 SOURCES: tuple[Source, ...] = (
     ProfileSource(),
     WeblinksSource(),
+    CourseSource(),
+    ScheduleSource(),
 )
 
 
@@ -37,6 +43,20 @@ def _validate(sources: tuple[Source, ...]) -> None:
 
     if not any(not s.depends_on_entities for s in sources):
         raise ValueError("at least one source must define entities (depends_on_entities=False)")
+
+    # A dependent source is scoped to the entity ids an entity-defining source
+    # produced, and ids are unique only within a namespace. A dependent source
+    # alone in its namespace can therefore never match anything -- it would
+    # ingest zero chunks silently, which is the worst way to find out.
+    entity_namespaces = {s.namespace for s in sources if not s.depends_on_entities}
+    orphaned = sorted(
+        {s.name for s in sources if s.depends_on_entities and s.namespace not in entity_namespaces}
+    )
+    if orphaned:
+        raise ValueError(
+            f"dependent source(s) {orphaned} are in a namespace with no entity-defining "
+            f"source; their chunks could never match an entity"
+        )
 
 
 _validate(SOURCES)

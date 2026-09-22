@@ -38,6 +38,7 @@ class LiveSystem:
         top_k: int,
         min_score: float = 0.0,
         filters: Mapping[str, Any] | None = None,
+        namespace: str | None = None,
     ) -> list[RetrievalResult]:
         """Embed and search, keeping only matches at or above ``min_score``.
 
@@ -46,7 +47,7 @@ class LiveSystem:
         chunks the model is never shown.
         """
         results = self.retriever.retrieve(
-            self.embedder.embed_query(question), top_k, filters=filters
+            self.embedder.embed_query(question), top_k, filters=filters, namespace=namespace
         )
         return [r for r in results if r.score >= min_score]
 
