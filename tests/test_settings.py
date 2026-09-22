@@ -121,7 +121,8 @@ def test_assert_dimension_tolerates_an_unreadable_description():
 def test_rerank_is_on_by_default(monkeypatch):
     """On, because it was measured to help and losing it is safe.
 
-    MRR 0.852 -> 0.900 (evaluation/results/2026-09-22-rerank). Affordable as a
+    MRR 0.852 -> 0.900 (origin/exp-reranker, evaluation/results/
+    2026-09-22-rerank). Affordable as a
     default only because the free tier running out degrades to plain cosine
     order rather than failing -- see FailOpenReranker.
     """

@@ -88,8 +88,10 @@ MIN_RETRIEVAL_SCORE = 0.35
 
 # --- Rerank (optional second-stage scoring) --------------------------------
 
-# Reranking is ON. Measured 2026-09-22 over 60 questions
-# (evaluation/results/2026-09-22-rerank/notes.md): MRR 0.852 -> 0.900,
+# Reranking is ON. Measured 2026-09-22 over 60 questions -- the harness and
+# the recorded run live on `origin/exp-reranker`
+# (evaluation/results/2026-09-22-rerank/notes.md there), following the same
+# convention as exp-topk: MRR 0.852 -> 0.900,
 # precision@8 59.6% -> 62.7%, concentrated in narrow course questions which
 # gain +0.152 MRR from a base of 15.2% precision -- the worst stratum in the
 # corpus. A cross-encoder reads the query and a chunk TOGETHER, so it sees
