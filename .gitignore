@@ -43,3 +43,6 @@ env/
 # setuptools artifacts from a non-editable `pip install .`
 build/
 dist/
+
+# Judge verdict cache for the top_k experiment: a cost optimisation, not a result.
+.topk_cache/
