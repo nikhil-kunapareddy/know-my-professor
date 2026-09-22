@@ -72,7 +72,14 @@ CHAT_NAMESPACES: tuple[str, ...] = (PEOPLE_NAMESPACE, COURSES_NAMESPACE)
 # file only names the provider. Override the model per deployment with
 # CHAT_MODEL, which is only meaningful together with CHAT_PROVIDER.
 DEFAULT_CHAT_PROVIDER = "anthropic"
-DEFAULT_TOP_K = 8
+
+# Chunks retrieved PER NAMESPACE, not per request: /chat runs one query against
+# each namespace in CHAT_NAMESPACES, so the model actually sees
+# DEFAULT_TOP_K * len(CHAT_NAMESPACES) chunks -- 22 today, not 11. Raised 8 -> 11
+# to widen recall on broad questions ("who works on NLP?"), where the corpus
+# holds far more valid people than 8 slots can carry. Override per deployment
+# with TOP_K.
+DEFAULT_TOP_K = 11
 
 # Cosine similarity below this is treated as "not really about the question".
 # Without a floor, vector search always returns top_k rows, so the pipeline's
