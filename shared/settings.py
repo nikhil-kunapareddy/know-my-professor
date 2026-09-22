@@ -16,11 +16,11 @@ import os
 from dataclasses import dataclass
 
 from shared.config import (
+    CHAT_NAMESPACES,
     DEFAULT_CHAT_PROVIDER,
     DEFAULT_EMBED_PROVIDER,
     DEFAULT_TOP_K,
     MIN_RETRIEVAL_SCORE,
-    PEOPLE_NAMESPACE,
     PINECONE_DEFAULT_CLOUD,
     PINECONE_DEFAULT_INDEX,
     PINECONE_DEFAULT_REGION,
@@ -59,6 +59,17 @@ def _float_env(name: str, default: float) -> float:
         raise MissingSettingError(f"env var {name} must be a number, got {raw!r}") from None
 
 
+def _csv_env(name: str, default: tuple[str, ...]) -> tuple[str, ...]:
+    """Comma-separated env var -> tuple, blanks dropped. Empty means default.
+
+    Order is preserved: it is the order the prompt presents the corpora in.
+    """
+    raw = os.environ.get(name)
+    if raw is None or not raw.strip():
+        return default
+    return tuple(part.strip() for part in raw.split(",") if part.strip())
+
+
 @dataclass(frozen=True)
 class ApiSettings:
     """Everything the /chat service reads from the environment."""
@@ -68,9 +79,10 @@ class ApiSettings:
     #: None means "let the chosen provider pick its own default_model".
     chat_model: str | None = None
     index_name: str = PINECONE_DEFAULT_INDEX
-    #: Index partition /chat queries. Must name the partition ingest wrote the
-    #: people corpus into; a mismatch is silent (empty results, not an error).
-    namespace: str = PEOPLE_NAMESPACE
+    #: Index partitions /chat searches, one query each, each with its own top_k.
+    #: Every name must match a partition ingest actually wrote; a mismatch is
+    #: silent (empty results from that partition, not an error).
+    namespaces: tuple[str, ...] = CHAT_NAMESPACES
     top_k: int = DEFAULT_TOP_K
     min_score: float = MIN_RETRIEVAL_SCORE
     pinecone_api_key: str = ""
@@ -82,7 +94,7 @@ class ApiSettings:
             chat_provider=os.environ.get("CHAT_PROVIDER") or DEFAULT_CHAT_PROVIDER,
             chat_model=os.environ.get("CHAT_MODEL") or None,
             index_name=os.environ.get("PINECONE_INDEX_NAME") or PINECONE_DEFAULT_INDEX,
-            namespace=os.environ.get("PINECONE_NAMESPACE") or PEOPLE_NAMESPACE,
+            namespaces=_csv_env("PINECONE_NAMESPACES", CHAT_NAMESPACES),
             top_k=_int_env("TOP_K", DEFAULT_TOP_K),
             min_score=_float_env("MIN_RETRIEVAL_SCORE", MIN_RETRIEVAL_SCORE),
             pinecone_api_key=require_env("PINECONE_API_KEY"),

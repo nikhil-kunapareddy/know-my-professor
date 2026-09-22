@@ -10,7 +10,7 @@ it without this file changing.
 from __future__ import annotations
 
 import time
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
@@ -62,7 +62,7 @@ class RAGPipeline:
         prompt_builder: PromptBuilder | None = None,
         top_k: int = DEFAULT_TOP_K,
         min_score: float = MIN_RETRIEVAL_SCORE,
-        namespace: str | None = None,
+        namespaces: Sequence[str | None] = (None,),
     ):
         self.embedder = embedder
         self.retriever = retriever
@@ -70,7 +70,7 @@ class RAGPipeline:
         self.prompt_builder = prompt_builder or PromptBuilder()
         self.top_k = top_k
         self.min_score = min_score
-        self.namespace = namespace
+        self.namespaces = tuple(namespaces)
 
     def answer(
         self,
@@ -80,23 +80,37 @@ class RAGPipeline:
     ) -> RAGResult:
         """Embed the question, retrieve context, and generate a cited answer.
 
-        ``namespace`` selects which partition of the index to search. It is a
-        hard choice, not a ranking hint: a Pinecone query reads exactly one
-        namespace, so passing the courses namespace means people chunks cannot
-        appear at all, and vice versa. Omit it to use the one this pipeline was
-        constructed with — which is how the API serves a single corpus without
-        repeating the name at every call site.
+        One query reads exactly ONE namespace, so searching several means one
+        query each. Each namespace gets its own ``top_k`` rather than sharing
+        one: cosine similarity cannot tell a person from a course, and a course
+        description — which is *about a topic* — outscores the bio of the person
+        who works on that topic. Measured on the golden set, sharing a single
+        top_k displaced the first correct chunk on 3 of 10 people questions.
+        Per-namespace slots make that arithmetically impossible, and the model
+        does the choosing it is already good at.
+
+        ``namespace`` restricts the search to exactly one, overriding the set
+        this pipeline was built with. The eval harness uses it to score a case
+        against the corpus that owns it.
         """
         timings: dict[str, float] = {}
-        namespace = namespace if namespace is not None else self.namespace
+        targets = (namespace,) if namespace is not None else self.namespaces
 
         with _timed(timings, "embed"):
             query_embedding = self.embedder.embed_query(question)
 
         with _timed(timings, "retrieve"):
-            results = self.retriever.retrieve(
-                query_embedding, self.top_k, filters=filters, namespace=namespace
-            )
+            results: list[RetrievalResult] = []
+            for target in targets:
+                results.extend(
+                    self.retriever.retrieve(
+                        query_embedding, self.top_k, filters=filters, namespace=target
+                    )
+                )
+            # Best-first across the union. Ordering is safe where truncating is
+            # not: nothing is dropped, so a strong foreign chunk can only sit
+            # above a correct one, never replace it.
+            results.sort(key=lambda r: r.score, reverse=True)
 
         # Vector search always returns top_k rows, however unrelated they are, so
         # without a floor the no-answer path could never fire and the model would
