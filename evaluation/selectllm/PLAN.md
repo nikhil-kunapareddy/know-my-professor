@@ -196,26 +196,48 @@ string, `client.messages.parse()` with a schema, and `shared/retry.py`'s
 exist — `output_format` is enforced server-side, so a validated object comes
 back and there is no JSON to fail to parse.
 
-## Projected cost — to be replaced by a measured `--dry-run`
+## Cost — input measured, output still projected
 
-40 cases × 5 arms × 2 repeats = 400 generations. Repeats exist because Claude 5
-rejects `temperature` entirely, so sampling noise cannot be turned off; Llama's
-`temperature=0.0` has no equivalent here.
+40 cases x 5 arms x 2 repeats = 400 generations. Repeats exist because Claude 5
+rejects `temperature` entirely, so sampling noise cannot be turned off.
 
-| component | estimate |
-| --- | --- |
-| generation, 400 calls @ 22 chunks | ~$14 |
-| judging, pointwise Fable, ~1.2k claims | ~$15 |
-| **total** | **~$30** |
+**Input is measured, not assumed: 5,272 tokens** per blended request at k=11
+(22 chunks) — mean over 8 real cases via `messages.count_tokens`, median 4,918,
+range 3,955-7,426. Rendered through the real `PromptBuilder` over actual chunk
+text from the `exp-topk` dumps, with the real `SYSTEM_INSTRUCTION`.
 
-Input is ~7.8K tokens per generation (22 chunks ≈ 7.7K, system 116). **Prompt
-caching does not help**: `SYSTEM_INSTRUCTION` is 465 chars ≈ 116 tokens against
-a 512–4096 minimum cacheable prefix, so the stable prefix silently will not
-cache, and the retrieved chunks — 95%+ of input — change every query.
+**`exp-topk`'s README assumed ~7,700 and is overstated 1.5x.** Its "$0.04 per
+query on Opus 5" should read ~$0.026 input. Worth correcting there.
 
-`--dry-run` must print the projected number per arm from `count_tokens` with
-zero generation calls, and that number gets approved before anything is spent.
-This table is arithmetic, not measurement.
+| component | low | mid | high |
+| --- | --- | --- | --- |
+| generation, 400 calls | $10.39 | $13.07 | $19.45 |
+| judging, pointwise Fable | $19.50 | $19.50 | $19.50 |
+| embedding / Pinecone / `count_tokens` | $0 | $0 | $0 |
+| **end to end** | **$29.89** | **$32.57** | **$38.95** |
+
+With a 1.5x rerun contingency: $45-58.
+
+Three properties of this shape:
+
+- **Judging is 60% of the bill.** All five generation arms together are $13;
+  Haiku's entire arm is $0.59. Cost discipline belongs in the judge, not the
+  candidate set.
+- **The band is the output/thinking unknown** — the very thing the experiment
+  measures. Tripling output moves the total $30 -> $39, so the uncertainty does
+  not change any decision. Bands assume ~350 visible tokens plus thinking at
+  1.4x (low) to 9x (medium, high case); Haiku runs no thinking.
+- **`list` cases drive 800 of the 1,760 claim calls** (45%), because an answer
+  naming ten people is ten claims to verify.
+
+**Generations must be dumped to `samples.jsonl` as `exp-topk` does**, so a
+rubric change re-judges from the dump and never re-pays for generation. Without
+that, every judge iteration costs another $13.
+
+`--dry-run` still gates the spend: it prints projected cost per arm from
+`count_tokens` with zero generation calls, and that number is approved before
+anything is spent. Output tokens stay projected until the first real arm runs;
+a ~$0.50 probe of 3 generations per arm would pin them if wanted.
 
 ## Known limits, stated up front
 
