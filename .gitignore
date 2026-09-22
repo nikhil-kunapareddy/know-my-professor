@@ -43,3 +43,6 @@ env/
 # setuptools artifacts from a non-editable `pip install .`
 build/
 dist/
+
+# Local copy of the raw GCS corpus, pulled for offline golden-set harvesting.
+.corpus/
