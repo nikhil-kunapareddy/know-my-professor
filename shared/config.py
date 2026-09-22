@@ -72,12 +72,55 @@ CHAT_NAMESPACES: tuple[str, ...] = (PEOPLE_NAMESPACE, COURSES_NAMESPACE)
 # file only names the provider. Override the model per deployment with
 # CHAT_MODEL, which is only meaningful together with CHAT_PROVIDER.
 DEFAULT_CHAT_PROVIDER = "anthropic"
-DEFAULT_TOP_K = 8
+
+# Chunks retrieved PER NAMESPACE, not per request: /chat runs one query against
+# each namespace in CHAT_NAMESPACES, so the model actually sees
+# DEFAULT_TOP_K * len(CHAT_NAMESPACES) chunks -- 22 today, not 11. Raised 8 -> 11
+# to widen recall on broad questions ("who works on NLP?"), where the corpus
+# holds far more valid people than 8 slots can carry. Override per deployment
+# with TOP_K.
+DEFAULT_TOP_K = 11
 
 # Cosine similarity below this is treated as "not really about the question".
 # Without a floor, vector search always returns top_k rows, so the pipeline's
 # no-answer path could never fire and an unrelated chunk would still be cited.
 MIN_RETRIEVAL_SCORE = 0.35
+
+# --- Rerank (optional second-stage scoring) --------------------------------
+
+# Reranking is OFF unless a deployment names a provider via RERANK_PROVIDER.
+# There is deliberately no default: retrieval and generation always happen, so
+# they get a fallback provider, whereas a reranker is an enhancement whose
+# absence must leave the pipeline byte-identical to what it was.
+#
+# Why a reranker and not a bigger top_k: a cross-encoder reads the query and a
+# chunk TOGETHER, so it sees interaction that cosine cannot. Measured on this
+# corpus (origin/exp-topk, 900 judged pairs), at top_k=11 per namespace only
+# 77.3% of people chunks and 61.2% of course chunks are judged usable, and on
+# narrow questions that falls to 50.9% and 15.2% -- a third of the context
+# window is noise that no value of top_k removes.
+DEFAULT_RERANK_PROVIDER: str | None = None
+
+# Rerank score below this is dropped. 0.0 means "keep everything", which is the
+# default ON PURPOSE: a cross-encoder score is a different scale from cosine
+# and the distribution on this corpus has not been measured yet. Picking a
+# number first is exactly how MIN_RETRIEVAL_SCORE above ended up inert.
+#
+# This floor is applied ONLY to chunks that actually carry a rerank score. A
+# degraded reranker returns them unscored, and filtering those would empty the
+# context and refuse every question. See RAGPipeline.answer.
+DEFAULT_RERANK_MIN_SCORE = 0.0
+
+# Chunks kept after reranking; None keeps all. This is the knob that makes a
+# reranker worth having -- reranking without truncating only renumbers the
+# citations. Over-fetch by raising TOP_K and cut back here.
+DEFAULT_RERANK_TOP_N: int | None = None
+
+# How long the fail-open breaker stays latched after the provider's allowance
+# runs out. The free Pinecone tier resets monthly while a Cloud Run revision
+# can outlive that, so the latch re-arms hourly and retries rather than
+# degrading until the next deploy. 0 latches until the process restarts.
+DEFAULT_RERANK_RETRY_AFTER_SECONDS = 3600.0
 
 # --- GCS -------------------------------------------------------------------
 

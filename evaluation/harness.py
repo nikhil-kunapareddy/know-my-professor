@@ -50,6 +50,11 @@ class EvalCase:
     #: people corpus, which is what a case omitting the field has always meant —
     #: so the golden file needed no edit when people moved off the unnamed
     #: default partition.
+    #:
+    #: An explicit ``null`` is the third option and means "every namespace",
+    #: i.e. the blended path ``/chat`` actually serves. Only cases that need
+    #: BOTH corpora at once should use it; CLAUDE.md records that no case could
+    #: express this before, which is why the blended path went unmeasured.
     namespace: str | None = PEOPLE_NAMESPACE
     #: True when the RIGHT behaviour is to decline. Without cases like these an
     #: evaluation can only reward retrieving more, so raising the relevance floor
@@ -86,7 +91,12 @@ class EvalCase:
             question=raw["question"],
             expected_slugs=slugs,
             expected_sections=tuple(raw.get("expected_sections", ())),
-            namespace=raw.get("namespace") or PEOPLE_NAMESPACE,
+            # An ABSENT key defaults to people, because the 60 original golden
+            # cases predate namespaces and omit it. An EXPLICIT null is
+            # different and means "search them all" -- the blended path /chat
+            # actually takes, which no case could express before. The two are
+            # told apart by key presence, since raw.get() collapses them.
+            namespace=raw["namespace"] if "namespace" in raw else PEOPLE_NAMESPACE,
             expect_no_answer=expect_no_answer,
             reference=raw.get("reference", ""),
             notes=raw.get("notes", ""),

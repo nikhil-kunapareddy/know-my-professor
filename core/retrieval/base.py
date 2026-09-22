@@ -15,6 +15,17 @@ class RetrievalResult:
     document_id: str
     score: float
     metadata: dict = field(default_factory=dict)
+    #: Cross-encoder relevance, set by a ``Reranker``; ``None`` means the chunk
+    #: was never reranked. Deliberately NOT written over ``score``: that field
+    #: is a cosine similarity, ``MIN_RETRIEVAL_SCORE`` filters on it, and the
+    #: two live on different scales.
+    #:
+    #: ``None`` is also the signal the pipeline keys off to decide whether the
+    #: rerank cutoff applies at all. When reranking is skipped -- disabled, or
+    #: degraded because the provider's quota ran out -- every chunk keeps
+    #: ``None`` here and the cutoff must not fire, or it would drop the entire
+    #: context and turn every answer into the no-answer string.
+    rerank_score: float | None = None
 
 
 class Retriever(ABC):

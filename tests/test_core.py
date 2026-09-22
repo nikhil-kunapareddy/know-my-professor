@@ -135,3 +135,132 @@ def test_prompt_builder_numbers_context_blocks():
     msg = builder.build_user_message("q?", [_result("a", "Ann"), _result("b", "Bob")])
     assert msg.index("[1] Ann") < msg.index("[2] Bob")
     assert msg.endswith("Question: q?\n")
+
+
+# --- reranking -------------------------------------------------------------
+
+
+class _FakeReranker:
+    """Reorders by a canned score map, or degrades and hands back the input.
+
+    ``degraded=True`` models the operating state that matters most: the
+    provider is configured but could not rank (out of quota, unreachable), so
+    it returns the results untouched with every ``rerank_score`` still None.
+    """
+
+    def __init__(self, scores=None, degraded=False):
+        self.scores = scores or {}
+        self.degraded = degraded
+        self.seen = None
+        self.calls = 0
+
+    def rerank(self, query, results, top_n=None):
+        self.calls += 1
+        self.seen = (query, [r.document_id for r in results])
+        if self.degraded:
+            return list(results)
+        for result in results:
+            result.rerank_score = self.scores.get(result.document_id, 0.0)
+        ranked = sorted(results, key=lambda r: r.rerank_score, reverse=True)
+        return ranked[:top_n] if top_n is not None else ranked
+
+
+def test_pipeline_reorders_sources_by_rerank_score():
+    """Cosine order says Ann then Bob; the cross-encoder disagrees, and wins."""
+    results = [_result("a", "Ann", score=0.9), _result("b", "Bob", score=0.8)]
+    reranker = _FakeReranker(scores={"a#biography": 0.1, "b#biography": 0.9})
+    pipe = RAGPipeline(_FakeEmbedder(), _FakeRetriever(results), _FakeGenerator(),
+                       top_k=2, min_score=0.0, reranker=reranker)
+
+    out = pipe.answer("q")
+    assert [s.document_id for s in out.sources] == ["b#biography", "a#biography"]
+    assert out.reranked is True
+    assert reranker.seen == ("q", ["a#biography", "b#biography"])
+
+
+def test_pipeline_sources_match_the_order_the_prompt_used():
+    """Citation [n] is resolved positionally against sources, so the two must agree."""
+    gen = _FakeGenerator()
+    results = [_result("a", "Ann", score=0.9), _result("b", "Bob", score=0.8)]
+    pipe = RAGPipeline(_FakeEmbedder(), _FakeRetriever(results), gen, top_k=2, min_score=0.0,
+                       reranker=_FakeReranker(scores={"a#biography": 0.1, "b#biography": 0.9}))
+
+    out = pipe.answer("q")
+    assert gen.last_user_message.index("[1] Bob") < gen.last_user_message.index("[2] Ann")
+    assert [s.metadata["professor_name"] for s in out.sources] == ["Bob", "Ann"]
+
+
+def test_pipeline_drops_chunks_below_the_rerank_cutoff():
+    results = [_result("a", "Ann", score=0.9), _result("b", "Bob", score=0.9)]
+    pipe = RAGPipeline(_FakeEmbedder(), _FakeRetriever(results), _FakeGenerator(),
+                       top_k=2, min_score=0.0, rerank_min_score=0.5,
+                       reranker=_FakeReranker(scores={"a#biography": 0.8, "b#biography": 0.2}))
+
+    out = pipe.answer("q")
+    assert [s.document_id for s in out.sources] == ["a#biography"]
+
+
+def test_pipeline_rerank_cutoff_can_refuse_outright():
+    """Nothing clears the bar, so the model is never asked."""
+    gen = _FakeGenerator()
+    results = [_result("a", "Ann", score=0.9)]
+    pipe = RAGPipeline(_FakeEmbedder(), _FakeRetriever(results), gen, top_k=1, min_score=0.0,
+                       rerank_min_score=0.5,
+                       reranker=_FakeReranker(scores={"a#biography": 0.1}))
+
+    out = pipe.answer("q")
+    assert out.answer == NO_ANSWER
+    assert out.retrieved == 1
+    assert gen.last_user_message is None
+
+
+def test_pipeline_ignores_the_rerank_cutoff_when_reranking_degraded():
+    """The one that protects correctness when the free tier runs out.
+
+    A degraded reranker returns chunks unscored. Applying a 0.5 cutoff to
+    unscored chunks would drop every one of them and refuse a question the
+    system can perfectly well answer — losing the reranker must cost relevance,
+    not correctness.
+    """
+    results = [_result("a", "Ann", score=0.9), _result("b", "Bob", score=0.8)]
+    pipe = RAGPipeline(_FakeEmbedder(), _FakeRetriever(results), _FakeGenerator(),
+                       top_k=2, min_score=0.0, rerank_min_score=0.5,
+                       reranker=_FakeReranker(degraded=True))
+
+    out = pipe.answer("q")
+    assert [s.document_id for s in out.sources] == ["a#biography", "b#biography"]
+    assert out.answer != NO_ANSWER
+    assert out.reranked is False  # how a caller tells a degraded answer apart
+
+
+def test_pipeline_truncates_to_rerank_top_n():
+    results = [_result(s, s.upper(), score=0.9) for s in ("a", "b", "c")]
+    pipe = RAGPipeline(_FakeEmbedder(), _FakeRetriever(results), _FakeGenerator(),
+                       top_k=3, min_score=0.0, rerank_top_n=2,
+                       reranker=_FakeReranker(scores={"a#biography": 0.1,
+                                                      "b#biography": 0.9,
+                                                      "c#biography": 0.5}))
+
+    out = pipe.answer("q")
+    assert [s.document_id for s in out.sources] == ["b#biography", "c#biography"]
+
+
+def test_pipeline_does_not_rerank_when_the_floor_left_nothing():
+    """No point paying for a rerank call on an empty list."""
+    reranker = _FakeReranker()
+    weak = [_result("a", "Ann", score=0.01)]
+    pipe = RAGPipeline(_FakeEmbedder(), _FakeRetriever(weak), _FakeGenerator(),
+                       min_score=0.35, reranker=reranker)
+
+    assert pipe.answer("q").answer == NO_ANSWER
+    assert reranker.calls == 0
+
+
+def test_pipeline_times_the_rerank_stage_only_when_one_runs():
+    results = [_result("a", "Ann")]
+    without = RAGPipeline(_FakeEmbedder(), _FakeRetriever(results), _FakeGenerator())
+    assert set(without.answer("q").timings_ms) == {"embed", "retrieve", "generate"}
+
+    with_rerank = RAGPipeline(_FakeEmbedder(), _FakeRetriever(results), _FakeGenerator(),
+                              min_score=0.0, reranker=_FakeReranker())
+    assert set(with_rerank.answer("q").timings_ms) == {"embed", "retrieve", "rerank", "generate"}

@@ -26,6 +26,11 @@ extract-gemini = ["google-generativeai==0.8.3"]
 # Same SDK as chat-anthropic, kept a separate group so a deployable can pull
 # the extractor without implying it also serves chat.
 extract-anthropic = ["anthropic==1.6.0"]
+# Pinecone's hosted reranking is a plain REST endpoint on api.pinecone.io, not
+# part of the vector SDK -- pinecone==5.4.2 has no inference surface, so using
+# the SDK for it would force a major-version bump. requests is already pinned
+# in five other extras; this is the one place the api image needs it.
+rerank-pinecone = ["requests==2.32.3"]
 
 # --- deployables -----------------------------------------------------------
 profiles = [
@@ -68,7 +73,10 @@ api = [
     "pydantic==2.10.3",
     # Both chat SDKs ship in the api image so CHAT_PROVIDER can be flipped
     # with an env var instead of a rebuild.
-    "know-my-professor[embed-mistral,chat-anthropic,chat-llama]",
+    # Reranking ships in the image but stays off unless RERANK_PROVIDER is set,
+    # so it can be enabled with an env var instead of a rebuild -- same reason
+    # both chat SDKs are here.
+    "know-my-professor[embed-mistral,chat-anthropic,chat-llama,rerank-pinecone]",
 ]
 frontend = [
     "streamlit==1.58.0",
