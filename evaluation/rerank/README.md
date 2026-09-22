@@ -1,5 +1,17 @@
 # Rerank experiment — the question set
 
+> **This lives on `origin/exp-reranker`**, following the same convention as
+> `exp-topk` and `exp-select-llm`: the experiment and its recorded run stay on
+> their own branch, while the thing they justified ships on `main`.
+>
+> On `main` you will find `core/rerank/` (the production reranker, ON by
+> default) and its unit tests. You will not find this harness, the 60-question
+> set, or `evaluation/results/2026-09-22-rerank/` — check this branch out when
+> you need to re-run or re-read the measurement.
+>
+> `evaluation/topk/` is vendored here too, byte-identical to `origin/exp-topk`,
+> because this experiment imports its judge and reuses its 900 cached verdicts.
+
 60 cases in `questions.jsonl`. **None were written for this experiment.** Both
 sources predate the reranker, so no question can have been shaped, even
 unconsciously, by what the reranker happens to do well.
