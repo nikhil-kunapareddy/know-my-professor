@@ -301,3 +301,66 @@ def test_the_quota_warning_is_logged_once_under_concurrency(caplog):
     disabled = [r for r in caplog.records if r.getMessage() == "reranker disabled"]
     assert len(disabled) == 1
     assert disabled[0].context["quota_exhausted"] is True
+
+
+def test_repeated_failures_latch_even_when_unrecognised():
+    """The safety net for a failure mode nobody has seen yet.
+
+    Nobody knows what Pinecone returns when the monthly rerank allowance runs
+    out. If `is_quota_exhausted` misses it, every request would pay a doomed
+    call plus its backoff for the rest of the month — unacceptable now that
+    reranking is on by default. Classification decides how fast we give up;
+    this decides that we give up at all.
+    """
+    inner = _Inner(error=RuntimeError("some unfamiliar 4xx"), quota=False)
+    wrapped = FailOpenReranker(inner, consecutive_failure_limit=3)
+
+    for _ in range(3):
+        wrapped.rerank("q", [_result("a")])
+    assert wrapped.degraded is True
+    assert inner.calls == 3
+
+    wrapped.rerank("q", [_result("a")])
+    assert inner.calls == 3  # latched; no further calls
+
+
+def test_a_success_resets_the_failure_run():
+    """Only CONSECUTIVE failures count, or a flaky month eventually latches."""
+    inner = _Inner(quota=False)
+    wrapped = FailOpenReranker(inner, consecutive_failure_limit=3)
+
+    inner.error = RuntimeError("blip")
+    wrapped.rerank("q", [_result("a")])
+    wrapped.rerank("q", [_result("a")])
+
+    inner.error = None
+    wrapped.rerank("q", [_result("a")])  # recovers
+
+    inner.error = RuntimeError("blip")
+    wrapped.rerank("q", [_result("a")])
+    wrapped.rerank("q", [_result("a")])
+    assert wrapped.degraded is False  # run restarted, only 2 since the success
+
+
+def test_the_log_says_which_rule_latched_it(caplog):
+    """"failure_limit" means _QUOTA_MARKERS missed a real exhaustion and needs
+    widening — this field is the only way that would ever be noticed."""
+    wrapped = FailOpenReranker(
+        _Inner(error=RuntimeError("mystery"), quota=False), consecutive_failure_limit=1
+    )
+    with caplog.at_level(logging.WARNING, logger="kmp.rerank"):
+        wrapped.rerank("q", [_result("a")])
+
+    record = next(r for r in caplog.records if r.getMessage() == "reranker disabled")
+    assert record.context["latched_on"] == "failure_limit"
+    assert record.context["quota_exhausted"] is False
+
+
+def test_a_quota_error_latches_immediately_not_after_the_limit():
+    """A recognised exhaustion should not cost four more doomed calls first."""
+    inner = _Inner(error=RuntimeError("out of quota"), quota=True)
+    wrapped = FailOpenReranker(inner, consecutive_failure_limit=5)
+
+    wrapped.rerank("q", [_result("a")])
+    assert wrapped.degraded is True
+    assert inner.calls == 1

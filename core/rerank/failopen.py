@@ -33,13 +33,17 @@ logger = logging.getLogger("kmp.rerank")
 class FailOpenReranker(Reranker):
     """Wraps a ``Reranker`` so any failure degrades instead of raising.
 
-    Two failure grades, because they deserve different responses:
+    Three failure grades, because they deserve different responses:
 
     - **transient** (a blip, a 429 that outlasted its backoff): degrade this one
       request, keep the provider enabled, try again next time.
     - **quota exhausted** (``inner.is_quota_exhausted`` says so): latch off, so
       later requests skip the provider entirely rather than paying a round trip
       per request to be told no again.
+    - **persistently broken** (``consecutive_failure_limit`` failures in a row,
+      whatever their kind): latch off anyway. Classification decides how fast we
+      stop asking; this decides that we stop asking at all, which is what makes
+      an on-by-default reranker safe against a failure mode nobody has seen yet.
 
     ``retry_after_seconds`` re-arms the latch so a long-lived revision recovers
     when the month rolls over; 0 means stay off until the process restarts.
@@ -49,6 +53,7 @@ class FailOpenReranker(Reranker):
         self,
         inner: Reranker,
         retry_after_seconds: float = 3600.0,
+        consecutive_failure_limit: int = 5,
         clock: Callable[[], float] = time.monotonic,
     ):
         self.inner = inner
@@ -57,10 +62,22 @@ class FailOpenReranker(Reranker):
         self.api_key_env = inner.api_key_env
         self.max_documents = inner.max_documents
         self.retry_after_seconds = retry_after_seconds
+        #: Latch after this many back-to-back failures of ANY kind, even ones
+        #: ``is_quota_exhausted`` does not recognise.
+        #:
+        #: This is the safety net for a genuinely unknown: nobody has yet seen
+        #: what Pinecone returns when the monthly rerank allowance runs out --
+        #: it may be a 429, a 402, or a 403 with wording the matcher misses.
+        #: Without this, an unrecognised exhaustion would be treated as
+        #: transient forever: every request would pay a doomed call plus its
+        #: backoff for the rest of the month. Classification decides how FAST
+        #: we give up; this decides THAT we give up.
+        self.consecutive_failure_limit = consecutive_failure_limit
         self._clock = clock
         self._lock = threading.Lock()
         #: Deadline after which the latch re-arms; None when enabled.
         self._disabled_until: float | None = None
+        self._consecutive_failures = 0
 
     @property
     def degraded(self) -> bool:
@@ -90,10 +107,14 @@ class FailOpenReranker(Reranker):
             return list(results)
 
         try:
-            return self.inner.rerank(query, results, top_n)
+            ranked = self.inner.rerank(query, results, top_n)
         except Exception as error:  # noqa: BLE001 - degrading is the point
             self._degrade(error)
             return list(results)
+
+        with self._lock:
+            self._consecutive_failures = 0
+        return ranked
 
     def _latched(self) -> bool:
         """Is the provider currently disabled? Re-arms an expired latch."""
@@ -102,8 +123,11 @@ class FailOpenReranker(Reranker):
                 return False
             if self._clock() < self._disabled_until:
                 return True
-            # Half-open: let exactly this request try, and re-latch if it fails.
+            # Half-open: let exactly this request try, and re-latch if it
+            # fails. The failure count resets too, or a single probe failure
+            # would immediately re-trip a limit reached an hour ago.
             self._disabled_until = None
+            self._consecutive_failures = 0
             logger.info(
                 "reranker re-armed",
                 extra={"context": {"model": self.model}},
@@ -120,25 +144,33 @@ class FailOpenReranker(Reranker):
         exhausted = self.inner.is_quota_exhausted(error)
 
         with self._lock:
-            already_latched = self._disabled_until is not None
-            if exhausted and not already_latched:
+            if self._disabled_until is not None:
+                return  # already latched; stay quiet rather than log per request
+            self._consecutive_failures += 1
+            failures = self._consecutive_failures
+            gave_up = failures >= self.consecutive_failure_limit
+            if exhausted or gave_up:
                 self._disabled_until = (
                     math.inf
                     if self.retry_after_seconds <= 0
                     else self._clock() + self.retry_after_seconds
                 )
-            elif already_latched:
-                return
 
+        latched = exhausted or gave_up
         logger.warning(
-            "reranker disabled" if exhausted else "rerank failed, answering unranked",
+            "reranker disabled" if latched else "rerank failed, answering unranked",
             extra={
                 "context": {
                     "model": self.model,
                     "error": type(error).__name__,
                     "detail": str(error)[:200],
                     "quota_exhausted": exhausted,
-                    "retry_after_s": self.retry_after_seconds if exhausted else 0,
+                    "consecutive_failures": failures,
+                    # Distinguishes "we recognised the quota error" from "we
+                    # gave up guessing" — the second means _QUOTA_MARKERS needs
+                    # widening, and this field is how you would ever find out.
+                    "latched_on": ("quota" if exhausted else "failure_limit") if latched else None,
+                    "retry_after_s": self.retry_after_seconds if latched else 0,
                 }
             },
         )
