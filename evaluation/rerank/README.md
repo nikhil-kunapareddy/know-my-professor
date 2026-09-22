@@ -97,6 +97,19 @@ question ("which courses and which faculty cover cryptography?"). CLAUDE.md
 records three such cases where a course chunk outscored the correct person
 chunk. None are in this set yet.
 
+## Reranking is now ON by default
+
+Changed 2026-09-22 on the strength of the result below. Two consequences worth
+knowing:
+
+- **`run_eval` now reranks**, because `evaluation/live.py`'s `connect()` builds
+  whatever the settings name. For a true baseline, run
+  `RERANK_PROVIDER=none python -m evaluation.run_eval`. Leaving it on also
+  spends one rerank request per case against the 500/month tier.
+- **This experiment is unaffected.** It builds its own reranker explicitly and
+  retrieves through `live.retriever`, bypassing the configured one — otherwise
+  the baseline arm would be reranked too.
+
 ## Running it
 
 ```bash

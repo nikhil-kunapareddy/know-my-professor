@@ -253,9 +253,22 @@ def booted(monkeypatch):
     app_module.state.clear()
 
 
-def test_lifespan_builds_no_reranker_by_default(booted, monkeypatch):
-    """An existing revision sets no RERANK_* var and must keep working."""
+def test_lifespan_builds_a_reranker_by_default(booted, monkeypatch):
+    """Reranking is ON without any RERANK_* var being set."""
     monkeypatch.delenv("RERANK_PROVIDER", raising=False)
+    asked = []
+    monkeypatch.setattr(
+        app_module, "build_reranker", lambda provider, **k: asked.append(provider) or _Stub("rr")
+    )
+
+    with TestClient(app_module.app):
+        assert isinstance(app_module.state["pipeline"].reranker, app_module.FailOpenReranker)
+    assert asked == ["pinecone"]
+
+
+def test_lifespan_skips_the_reranker_when_switched_off(booted, monkeypatch):
+    """The rollback path: no rebuild, no code change, no boot failure."""
+    monkeypatch.setenv("RERANK_PROVIDER", "none")
     called = []
     monkeypatch.setattr(app_module, "build_reranker", lambda *a, **k: called.append(a))
 

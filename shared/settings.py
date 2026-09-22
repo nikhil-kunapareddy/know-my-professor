@@ -28,6 +28,7 @@ from shared.config import (
     PINECONE_DEFAULT_CLOUD,
     PINECONE_DEFAULT_INDEX,
     PINECONE_DEFAULT_REGION,
+    RERANK_DISABLED_VALUES,
 )
 
 
@@ -51,6 +52,22 @@ def _int_env(name: str, default: int) -> int:
         return int(raw)
     except ValueError:
         raise MissingSettingError(f"env var {name} must be an integer, got {raw!r}") from None
+
+
+def _rerank_provider_env() -> str | None:
+    """RERANK_PROVIDER, where "none"/"off"/"false"/"0"/"disabled" mean no reranker.
+
+    The plain ``os.environ.get(X) or DEFAULT`` idiom used for every other
+    provider cannot express "off" here, because the default is truthy: an empty
+    or unset value falls back to "pinecone". Reranking must stay switchable
+    without a rebuild -- it is the rollback for a feature that costs quota --
+    so the disabling values are explicit.
+    """
+    raw = os.environ.get("RERANK_PROVIDER")
+    if raw is None or not raw.strip():
+        return DEFAULT_RERANK_PROVIDER
+    value = raw.strip()
+    return None if value.lower() in RERANK_DISABLED_VALUES else value
 
 
 def _optional_int_env(name: str, default: int | None) -> int | None:
@@ -125,7 +142,7 @@ class ApiSettings:
             namespaces=_csv_env("PINECONE_NAMESPACES", CHAT_NAMESPACES),
             top_k=_int_env("TOP_K", DEFAULT_TOP_K),
             min_score=_float_env("MIN_RETRIEVAL_SCORE", MIN_RETRIEVAL_SCORE),
-            rerank_provider=os.environ.get("RERANK_PROVIDER") or DEFAULT_RERANK_PROVIDER,
+            rerank_provider=_rerank_provider_env(),
             rerank_model=os.environ.get("RERANK_MODEL") or None,
             rerank_min_score=_float_env("RERANK_MIN_SCORE", DEFAULT_RERANK_MIN_SCORE),
             rerank_top_n=_optional_int_env("RERANK_TOP_N", DEFAULT_RERANK_TOP_N),

@@ -43,3 +43,11 @@ env/
 # setuptools artifacts from a non-editable `pip install .`
 build/
 dist/
+
+# Local experiment scratch: a pulled copy of the GCS corpus (~51MB) and the
+# judge verdict caches. Valuable to keep locally, never to commit -- `git add
+# -A` swept 12,883 of these into a commit once.
+.corpus/
+.topk_cache/
+.selectllm_cache/
+.deepeval_cache/

@@ -88,18 +88,28 @@ MIN_RETRIEVAL_SCORE = 0.35
 
 # --- Rerank (optional second-stage scoring) --------------------------------
 
-# Reranking is OFF unless a deployment names a provider via RERANK_PROVIDER.
-# There is deliberately no default: retrieval and generation always happen, so
-# they get a fallback provider, whereas a reranker is an enhancement whose
-# absence must leave the pipeline byte-identical to what it was.
+# Reranking is ON. Measured 2026-09-22 over 60 questions
+# (evaluation/results/2026-09-22-rerank/notes.md): MRR 0.852 -> 0.900,
+# precision@8 59.6% -> 62.7%, concentrated in narrow course questions which
+# gain +0.152 MRR from a base of 15.2% precision -- the worst stratum in the
+# corpus. A cross-encoder reads the query and a chunk TOGETHER, so it sees
+# interaction cosine cannot, which is why no value of top_k removes that noise.
 #
-# Why a reranker and not a bigger top_k: a cross-encoder reads the query and a
-# chunk TOGETHER, so it sees interaction that cosine cannot. Measured on this
-# corpus (origin/exp-topk, 900 judged pairs), at top_k=11 per namespace only
-# 77.3% of people chunks and 61.2% of course chunks are judged usable, and on
-# narrow questions that falls to 50.9% and 15.2% -- a third of the context
-# window is noise that no value of top_k removes.
-DEFAULT_RERANK_PROVIDER: str | None = None
+# Being on by default is affordable only because losing it is safe: the free
+# tier allows 500 rerank requests a month and one /chat question spends one, so
+# exhaustion is an EXPECTED operating state, not a failure. FailOpenReranker
+# degrades to plain cosine order -- exactly the behaviour shipped before this
+# -- and latches off rather than retrying into a wall.
+#
+# Set RERANK_PROVIDER to one of DISABLED_VALUES below to turn it off without a
+# rebuild. That escape hatch is load-bearing now that the default is on.
+DEFAULT_RERANK_PROVIDER: str | None = "pinecone"
+
+# Env values that mean "no reranker". Needed because the usual
+# ``os.environ.get(X) or DEFAULT`` idiom cannot express "off" once DEFAULT is
+# truthy -- an empty string falls straight back to the default, so without
+# these the feature could only be disabled by a code change.
+RERANK_DISABLED_VALUES = frozenset({"none", "off", "false", "0", "disabled"})
 
 # Rerank score below this is dropped. 0.0 means "keep everything", which is the
 # default ON PURPOSE: a cross-encoder score is a different scale from cosine

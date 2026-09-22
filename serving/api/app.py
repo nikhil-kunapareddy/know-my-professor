@@ -14,8 +14,10 @@ Required env:
 Optional env:
   PINECONE_INDEX_NAME, PINECONE_NAMESPACES, EMBED_PROVIDER, CHAT_PROVIDER,
   LLAMA_CHAT_MODEL, TOP_K, MIN_RETRIEVAL_SCORE, REQUEST_BUDGET_SECONDS,
-  RERANK_PROVIDER, RERANK_MODEL, RERANK_MIN_SCORE, RERANK_TOP_N,
-  RERANK_RETRY_AFTER_SECONDS
+  RERANK_MODEL, RERANK_MIN_SCORE, RERANK_TOP_N, RERANK_RETRY_AFTER_SECONDS
+Reranking is ON by default (RERANK_PROVIDER=pinecone). Set RERANK_PROVIDER to
+"none"/"off"/"false"/"0"/"disabled" to turn it off without a rebuild; it reuses
+PINECONE_API_KEY, so it needs no new secret.
 """
 
 from __future__ import annotations
