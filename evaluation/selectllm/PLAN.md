@@ -171,8 +171,30 @@ claims, verify each claim against the chunk it cites, one small call per claim.
 Reuse `judge.py`'s disk cache keyed on (rubric version, model, effort, inputs),
 so a re-score is free and a rubric edit invalidates correctly.
 
-DeepEval stays available for a cross-check on a sample, with its cheap Haiku
-judge, if the custom judge's numbers look implausible.
+**No framework, and DeepEval is not used at all here** — not even as a
+cross-check. Three reasons, in order of weight:
+
+- A 1-in-35 oracle cannot validate a 0-in-900 one. DeepEval's cheap judge
+  returned unparseable JSON on 1 pair in 35 on the 2026-09-20 live run; the
+  pointwise judge made zero errors over 900 pairs.
+- Its numbers would not be comparable anyway — different judge, rubric and
+  metric set. CLAUDE.md already records this for the Ragas -> DeepEval port,
+  where stored runs became non-comparable for exactly this reason.
+- It is 1,341 lines of wiring plus 1,004 lines of tests, against 266 for
+  `topk/judge.py`, and pulls opentelemetry + posthog (which is why it is kept
+  out of requirements.txt).
+
+What replaces the cross-check is a **hand-labelled sample**: ~30 claims labelled
+by hand, scored against the judge with Cohen's kappa, before the grid runs. That
+validates the judge against the only ground truth that counts, and it also
+settles `effort: low` vs `medium` for the judge itself. `exp-topk` listed this
+as an unmet limit; here it is a prerequisite.
+
+The judge needs no abstraction beyond what the repo already has: a rubric
+string, `client.messages.parse()` with a schema, and `shared/retry.py`'s
+`with_backoff`. Structured outputs are what remove the framework's reason to
+exist — `output_format` is enforced server-side, so a validated object comes
+back and there is no JSON to fail to parse.
 
 ## Projected cost — to be replaced by a measured `--dry-run`
 
@@ -200,8 +222,9 @@ This table is arithmetic, not measurement.
 - **n = 40 across 5 strata** is 4–12 cases per stratum. Paired comparison across
   arms (same cases, same chunks) is what makes it readable at this n; absolute
   levels are soft, and `trap` at n=4 can only show a large effect.
-- **The judge is unvalidated against human labels.** Same limit `exp-topk`
-  recorded. A hand-labelled sample (~30 claims, Cohen's κ) would fix it.
+- **Judge validation is a prerequisite, not a limit.** Unlike `exp-topk`, this
+  run does not start until the ~30-claim hand-labelled sample is scored. If
+  kappa is poor, the rubric is rewritten before any arm is measured.
 - **Retrieval is held at k=11, which is not live.** See above.
 - **Two arms cannot be swept on effort** — Haiku 4.5 rejects the parameter.
 - **CoS coverage.** 783 College of Science profiles were added 2026-09-21 with
