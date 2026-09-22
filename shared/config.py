@@ -50,9 +50,19 @@ FETCH_BATCH_SIZE = 100
 # "people", not "professors": the directories call postdocs, PhD students and
 # staff "faculty" too, and the corpus keeps whoever has substantive content.
 #
-# The course namespace stays in ``preprocessing/sources/courses``: nothing in
-# serving routes to it yet. Move it here when serving needs to name it.
 PEOPLE_NAMESPACE = "people"
+
+# The course corpus. Lives here for the same reason: serving now names it too.
+COURSES_NAMESPACE = "courses"
+
+# Namespaces /chat searches, in order. EVERY listed namespace gets its own
+# top_k -- they are not merged into one top_k -- because a cosine score cannot
+# tell a person from a course. Measured 2026-09-21 on the golden set: course
+# descriptions are *about topics*, so "who works on formal verification?" scores
+# a syllabus (0.769) above the right professor's bio (0.729). Merging into one
+# top_k displaced the first correct chunk on 3 of 10 people questions. Giving
+# each namespace its own slots makes that arithmetically impossible.
+CHAT_NAMESPACES: tuple[str, ...] = (PEOPLE_NAMESPACE, COURSES_NAMESPACE)
 
 # --- Generation / retrieval (core) -----------------------------------------
 
