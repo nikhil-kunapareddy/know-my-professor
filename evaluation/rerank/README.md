@@ -76,6 +76,42 @@ question ("which courses and which faculty cover cryptography?"). CLAUDE.md
 records three such cases where a course chunk outscored the correct person
 chunk. None are in this set yet.
 
+## Running it
+
+```bash
+python -m evaluation.rerank --dry-run     # retrieve + rerank, no judge
+python -m evaluation.rerank               # the full run
+python -m evaluation.rerank --corpus courses --stratum narrow
+python -m evaluation.rerank --from-dump   # re-score a recording, no API calls
+```
+
+Both arms hold the **same chunks** — reranking reorders a set, it does not
+change it — so each chunk is judged once and scores both. `evaluation.topk`'s
+cache key is (rubric, model, effort, question, chunk_id, text) and contains
+none of the ordering, so the 50 carried-over questions mostly hit its 900
+existing verdicts. The 10 blended questions are new and are what the judging
+actually costs.
+
+`evaluation/topk` is **imported, never modified**. Its judge and its per-k
+arithmetic are the measuring instrument; changing the instrument between
+experiments would make the two sets of numbers incomparable. `blended` is
+absent from its `STRATA`, so this package carries its own four-value tuple
+rather than editing that one.
+
+Budget: **one rerank request per question**, against 500/month. A full run
+spends 60. `--from-dump` spends nothing.
+
+## Reading recall in the output
+
+At the full retrieved depth the two arms **must** show identical recall —
+reordering cannot add a chunk retrieval never returned, so a difference there
+is a bug, not a result.
+
+At any smaller k recall can move **both ways**, because the prefix is then a
+genuinely different set of chunks. That is the entire point of reranking, and
+equally it is how a cutoff loses recall. MRR and precision are where a working
+reranker shows up first.
+
 ## Loading
 
 `namespace: null` is new: an **absent** key still defaults to `people` (the 60
