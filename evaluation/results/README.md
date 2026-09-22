@@ -15,6 +15,10 @@ produced it.
 > comparisons that do not hold. They remain in git history if a conclusion
 > needs its working shown. The layout below is the convention for the next run.
 
+> The 2026-09-22 rerank run is not here — it lives on `origin/exp-reranker`
+> alongside the harness that produced it, the same way `exp-topk` keeps its
+> own. Experiments stay on their branch; what they justified ships on `main`.
+
 ## What each run directory holds
 
 | file | what it is |

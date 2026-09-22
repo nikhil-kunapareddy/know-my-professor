@@ -88,7 +88,8 @@ absolute cosine values.
 
 **The other production answer is to skip hybrid and rerank instead**:
 over-retrieve with dense, then run a cross-encoder over the candidates.
-`evaluation/topk`'s README independently reached for this — it concluded the
+`evaluation/topk`'s README (on `origin/exp-topk`) independently reached for
+this — it concluded the
 system needs "a *relative* signal (top-1 margin over top-2..k, or a rerank
 step), not a cosine threshold." Reranking often beats hybrid per unit of effort,
 at the cost of per-request latency and money, where BM25 is free. **Worth
