@@ -19,6 +19,7 @@ from pathlib import Path
 
 from core.llm.prompts import cited_numbers
 from core.pipeline import NO_ANSWER
+from shared.config import PEOPLE_NAMESPACE
 
 #: Vector IDs are ``{slug}#{section_type}``.
 ID_SEPARATOR = "#"
@@ -44,9 +45,12 @@ class EvalCase:
     expected_slugs: tuple[str, ...] = ()
     expected_sections: tuple[str, ...] = ()
     #: Which Pinecone namespace answers this case. A query reads exactly one, so
-    #: a course case run against the professor namespace retrieves nothing and
-    #: scores a miss that says nothing about retrieval quality.
-    namespace: str | None = None
+    #: a course case run against the people namespace retrieves nothing and
+    #: scores a miss that says nothing about retrieval quality. Defaults to the
+    #: people corpus, which is what a case omitting the field has always meant —
+    #: so the golden file needed no edit when people moved off the unnamed
+    #: default partition.
+    namespace: str | None = PEOPLE_NAMESPACE
     #: True when the RIGHT behaviour is to decline. Without cases like these an
     #: evaluation can only reward retrieving more, so raising the relevance floor
     #: always looks free — which is exactly the question MIN_RETRIEVAL_SCORE
@@ -82,7 +86,7 @@ class EvalCase:
             question=raw["question"],
             expected_slugs=slugs,
             expected_sections=tuple(raw.get("expected_sections", ())),
-            namespace=raw.get("namespace") or None,
+            namespace=raw.get("namespace") or PEOPLE_NAMESPACE,
             expect_no_answer=expect_no_answer,
             reference=raw.get("reference", ""),
             notes=raw.get("notes", ""),

@@ -15,6 +15,7 @@ from preprocessing.sources.courses.source import COURSES_NAMESPACE, CourseSource
 from preprocessing.sources.schedule.banner import BannerClient
 from preprocessing.sources.schedule.runner import course_slug
 from preprocessing.sources.schedule.source import ScheduleSource
+from shared.config import PEOPLE_NAMESPACE
 
 SUBJECT_HTML = """
 <html><body>
@@ -99,13 +100,31 @@ def test_both_course_sources_share_one_namespace():
     assert CourseSource().namespace == ScheduleSource().namespace == COURSES_NAMESPACE
 
 
-def test_people_stay_in_the_default_namespace():
-    """Moving them would re-mint every existing vector."""
+def test_people_sources_share_the_people_namespace():
+    """Weblinks enrich a profile, so both must land in the same partition.
+
+    Split across namespaces, a professor's website chunks could never be
+    retrieved alongside their biography — and nothing would error.
+    """
     from preprocessing.sources.profiles.source import ProfileSource
     from preprocessing.sources.weblinks.source import WeblinksSource
 
-    assert ProfileSource().namespace is None
-    assert WeblinksSource().namespace is None
+    assert ProfileSource().namespace == WeblinksSource().namespace == PEOPLE_NAMESPACE
+
+
+def test_every_registered_source_names_a_namespace():
+    """``None`` is the unnamed default partition and means "someone forgot"."""
+    from preprocessing.sources.registry import SOURCES
+
+    assert [s.name for s in SOURCES if not s.namespace] == []
+
+
+def test_the_api_queries_the_namespace_ingest_writes():
+    """The one pairing that fails silently: empty results, never an error."""
+    from preprocessing.sources.profiles.source import ProfileSource
+    from shared.settings import ApiSettings
+
+    assert ApiSettings().namespace == ProfileSource().namespace
 
 
 def test_registry_rejects_a_dependent_source_alone_in_its_namespace():
@@ -147,8 +166,8 @@ def test_collect_chunks_groups_by_namespace():
             return iter(data.get(prefix, []))
 
     grouped = _collect_chunks(_Store(), limit=None)
-    assert set(grouped) == {None, COURSES_NAMESPACE}
-    assert [c.vector_id for c in grouped[None]] == ["a#biography"]
+    assert set(grouped) == {PEOPLE_NAMESPACE, COURSES_NAMESPACE}
+    assert [c.vector_id for c in grouped[PEOPLE_NAMESPACE]] == ["a#biography"]
     assert [c.vector_id for c in grouped[COURSES_NAMESPACE]] == ["course-cs3800#course_description"]
 
 
@@ -167,10 +186,18 @@ def test_pipeline_passes_the_namespace_to_the_retriever():
             return [0.0]
 
     pipeline = RAGPipeline(
-        embedder=_Embedder(), retriever=_Retriever(), generator=None, top_k=8, min_score=0.0
+        embedder=_Embedder(), retriever=_Retriever(), generator=None, top_k=8, min_score=0.0,
+        namespace=PEOPLE_NAMESPACE,
     )
+
+    # Explicit wins...
     pipeline.answer("what does CS 3800 cover?", namespace="courses")
     assert seen["namespace"] == "courses"
+
+    # ...and omitting it falls back to the one the pipeline was built with,
+    # rather than silently querying the unnamed default partition.
+    pipeline.answer("who works on compilers?")
+    assert seen["namespace"] == PEOPLE_NAMESPACE
 
 
 # --- ingestable guards -----------------------------------------------------

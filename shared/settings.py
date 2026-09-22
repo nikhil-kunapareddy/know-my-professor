@@ -20,6 +20,7 @@ from shared.config import (
     DEFAULT_EMBED_PROVIDER,
     DEFAULT_TOP_K,
     MIN_RETRIEVAL_SCORE,
+    PEOPLE_NAMESPACE,
     PINECONE_DEFAULT_CLOUD,
     PINECONE_DEFAULT_INDEX,
     PINECONE_DEFAULT_REGION,
@@ -67,6 +68,9 @@ class ApiSettings:
     #: None means "let the chosen provider pick its own default_model".
     chat_model: str | None = None
     index_name: str = PINECONE_DEFAULT_INDEX
+    #: Index partition /chat queries. Must name the partition ingest wrote the
+    #: people corpus into; a mismatch is silent (empty results, not an error).
+    namespace: str = PEOPLE_NAMESPACE
     top_k: int = DEFAULT_TOP_K
     min_score: float = MIN_RETRIEVAL_SCORE
     pinecone_api_key: str = ""
@@ -78,6 +82,7 @@ class ApiSettings:
             chat_provider=os.environ.get("CHAT_PROVIDER") or DEFAULT_CHAT_PROVIDER,
             chat_model=os.environ.get("CHAT_MODEL") or None,
             index_name=os.environ.get("PINECONE_INDEX_NAME") or PINECONE_DEFAULT_INDEX,
+            namespace=os.environ.get("PINECONE_NAMESPACE") or PEOPLE_NAMESPACE,
             top_k=_int_env("TOP_K", DEFAULT_TOP_K),
             min_score=_float_env("MIN_RETRIEVAL_SCORE", MIN_RETRIEVAL_SCORE),
             pinecone_api_key=require_env("PINECONE_API_KEY"),

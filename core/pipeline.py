@@ -62,6 +62,7 @@ class RAGPipeline:
         prompt_builder: PromptBuilder | None = None,
         top_k: int = DEFAULT_TOP_K,
         min_score: float = MIN_RETRIEVAL_SCORE,
+        namespace: str | None = None,
     ):
         self.embedder = embedder
         self.retriever = retriever
@@ -69,6 +70,7 @@ class RAGPipeline:
         self.prompt_builder = prompt_builder or PromptBuilder()
         self.top_k = top_k
         self.min_score = min_score
+        self.namespace = namespace
 
     def answer(
         self,
@@ -80,10 +82,13 @@ class RAGPipeline:
 
         ``namespace`` selects which partition of the index to search. It is a
         hard choice, not a ranking hint: a Pinecone query reads exactly one
-        namespace, so passing the courses namespace means professor chunks
-        cannot appear at all, and vice versa. Defaults to the professor corpus.
+        namespace, so passing the courses namespace means people chunks cannot
+        appear at all, and vice versa. Omit it to use the one this pipeline was
+        constructed with — which is how the API serves a single corpus without
+        repeating the name at every call site.
         """
         timings: dict[str, float] = {}
+        namespace = namespace if namespace is not None else self.namespace
 
         with _timed(timings, "embed"):
             query_embedding = self.embedder.embed_query(question)

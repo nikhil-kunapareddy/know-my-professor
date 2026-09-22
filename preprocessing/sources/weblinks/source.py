@@ -12,6 +12,8 @@ hypothetical.
 
 from __future__ import annotations
 
+from shared.config import PEOPLE_NAMESPACE
+
 from ..base import (
     Chunk,
     SectionSpec,
@@ -41,6 +43,7 @@ class WeblinksSource(Source):
     prefix = "weblinks/"
     sections = WEBLINKS_SECTIONS
     depends_on_entities = True
+    namespace = PEOPLE_NAMESPACE
 
     def entity_id(self, record: dict) -> str | None:
         """The profile entity this website enriches -- same scheme as profiles."""

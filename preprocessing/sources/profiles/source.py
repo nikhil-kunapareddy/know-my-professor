@@ -12,6 +12,8 @@ source reusing these keys anyway. What must stay unique is the entity id, which
 
 from __future__ import annotations
 
+from shared.config import PEOPLE_NAMESPACE
+
 from ..base import (
     Chunk,
     SectionSpec,
@@ -40,6 +42,7 @@ class ProfileSource(Source):
     prefix = "profiles/"
     sections = PROFILE_SECTIONS
     depends_on_entities = False
+    namespace = PEOPLE_NAMESPACE
 
     def entity_id(self, record: dict) -> str | None:
         """Globally unique id for a professor -- see ``..entities.entity_key``."""
