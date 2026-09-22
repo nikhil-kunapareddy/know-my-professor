@@ -17,8 +17,14 @@ from typing import Any
 
 from core.llm.base import Generator
 from core.llm.prompts import SYSTEM_INSTRUCTION, PromptBuilder
+from core.rerank.base import Reranker
 from core.retrieval.base import RetrievalResult, Retriever
-from shared.config import DEFAULT_TOP_K, MIN_RETRIEVAL_SCORE
+from shared.config import (
+    DEFAULT_RERANK_MIN_SCORE,
+    DEFAULT_RERANK_TOP_N,
+    DEFAULT_TOP_K,
+    MIN_RETRIEVAL_SCORE,
+)
 from shared.embeddings.base import Embedder
 
 NO_ANSWER = "I don't have that information in my data."
@@ -49,6 +55,10 @@ class RAGResult:
     sources: list[RetrievalResult] = field(default_factory=list)
     retrieved: int = 0
     timings_ms: dict[str, float] = field(default_factory=dict)
+    #: Whether a reranker actually re-ordered these sources. False when none is
+    #: configured AND when one is configured but degraded, so a caller logging
+    #: this can tell a quietly-degraded answer from a reranked one.
+    reranked: bool = False
 
 
 class RAGPipeline:
@@ -63,6 +73,9 @@ class RAGPipeline:
         top_k: int = DEFAULT_TOP_K,
         min_score: float = MIN_RETRIEVAL_SCORE,
         namespaces: Sequence[str | None] = (None,),
+        reranker: Reranker | None = None,
+        rerank_min_score: float = DEFAULT_RERANK_MIN_SCORE,
+        rerank_top_n: int | None = DEFAULT_RERANK_TOP_N,
     ):
         self.embedder = embedder
         self.retriever = retriever
@@ -71,6 +84,12 @@ class RAGPipeline:
         self.top_k = top_k
         self.min_score = min_score
         self.namespaces = tuple(namespaces)
+        # NOTE: unlike ``prompt_builder`` just above, where None means "use the
+        # default", None here means DISABLED. Reranking is optional and off
+        # unless a deployment names a provider.
+        self.reranker = reranker
+        self.rerank_min_score = rerank_min_score
+        self.rerank_top_n = rerank_top_n
 
     def answer(
         self,
@@ -119,15 +138,53 @@ class RAGPipeline:
         if not relevant:
             return RAGResult(answer=NO_ANSWER, retrieved=len(results), timings_ms=timings)
 
+        reranked = False
+        if self.reranker is not None:
+            with _timed(timings, "rerank"):
+                relevant = self.reranker.rerank(question, relevant, self.rerank_top_n)
+            # A reranker that could not rank -- degraded, out of quota -- hands
+            # the list straight back with every rerank_score still None. Keying
+            # off the score rather than off "a reranker exists" is what makes
+            # the cutoff safe: applied blindly it would compare a threshold
+            # against nothing, drop the entire context, and turn every answer
+            # into the no-answer string. Losing the reranker must cost
+            # relevance, never correctness.
+            reranked = any(r.rerank_score is not None for r in relevant)
+
+        if reranked:
+            relevant = [
+                r
+                for r in relevant
+                if r.rerank_score is not None and r.rerank_score >= self.rerank_min_score
+            ]
+            if self.rerank_top_n is not None:
+                relevant = relevant[: self.rerank_top_n]
+            if not relevant:
+                return RAGResult(
+                    answer=NO_ANSWER,
+                    retrieved=len(results),
+                    timings_ms=timings,
+                    reranked=True,
+                )
+
         user_message = self.prompt_builder.build_user_message(question, relevant)
         with _timed(timings, "generate"):
             answer = self.generator.generate(SYSTEM_INSTRUCTION, user_message)
 
         if not answer:
-            return RAGResult(answer=NO_ANSWER, retrieved=len(results), timings_ms=timings)
+            return RAGResult(
+                answer=NO_ANSWER,
+                retrieved=len(results),
+                timings_ms=timings,
+                reranked=reranked,
+            )
         return RAGResult(
             answer=answer,
+            # Same list, same order, that built the prompt above -- citation [n]
+            # is resolved positionally against this, so reordering one without
+            # the other silently mis-attributes every citation.
             sources=relevant,
             retrieved=len(results),
             timings_ms=timings,
+            reranked=reranked,
         )

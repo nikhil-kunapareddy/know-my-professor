@@ -113,3 +113,56 @@ def test_assert_dimension_reads_dict_descriptions():
 def test_assert_dimension_tolerates_an_unreadable_description():
     """An SDK shape change should not block an otherwise valid ingest."""
     PineconeStore.assert_dimension(object(), "idx", 1024)
+
+
+# --- rerank settings -------------------------------------------------------
+
+
+def test_rerank_is_off_unless_a_provider_is_named(monkeypatch):
+    """Absence must be the default: CI never sets env vars, so an existing
+    revision has none of these and has to keep booting and behaving as before."""
+    monkeypatch.setenv("PINECONE_API_KEY", "pk")
+    for name in ("RERANK_PROVIDER", "RERANK_MODEL", "RERANK_MIN_SCORE",
+                 "RERANK_TOP_N", "RERANK_RETRY_AFTER_SECONDS"):
+        monkeypatch.delenv(name, raising=False)
+
+    settings = ApiSettings.from_env()
+    assert settings.rerank_provider is None
+    assert settings.rerank_model is None
+    assert settings.rerank_top_n is None
+    # 0.0, not 0.5: a cross-encoder score is a different scale from cosine and
+    # this corpus's distribution has not been measured. Picking a number first
+    # is how MIN_RETRIEVAL_SCORE ended up inert.
+    assert settings.rerank_min_score == 0.0
+
+
+def test_rerank_settings_read_overrides(monkeypatch):
+    monkeypatch.setenv("PINECONE_API_KEY", "pk")
+    monkeypatch.setenv("RERANK_PROVIDER", "pinecone")
+    monkeypatch.setenv("RERANK_MODEL", "pinecone-rerank-v0")
+    monkeypatch.setenv("RERANK_MIN_SCORE", "0.5")
+    monkeypatch.setenv("RERANK_TOP_N", "8")
+    monkeypatch.setenv("RERANK_RETRY_AFTER_SECONDS", "60")
+
+    settings = ApiSettings.from_env()
+    assert settings.rerank_provider == "pinecone"
+    assert settings.rerank_model == "pinecone-rerank-v0"
+    assert (settings.rerank_min_score, settings.rerank_top_n) == (0.5, 8)
+    assert settings.rerank_retry_after_seconds == 60.0
+
+
+def test_rerank_top_n_distinguishes_unset_from_zero(monkeypatch):
+    """None keeps every chunk; 0 would keep none, so they cannot share a value."""
+    monkeypatch.setenv("PINECONE_API_KEY", "pk")
+    monkeypatch.setenv("RERANK_TOP_N", "0")
+    assert ApiSettings.from_env().rerank_top_n == 0
+
+    monkeypatch.setenv("RERANK_TOP_N", "")
+    assert ApiSettings.from_env().rerank_top_n is None
+
+
+def test_rerank_numeric_settings_reject_garbage(monkeypatch):
+    monkeypatch.setenv("PINECONE_API_KEY", "pk")
+    monkeypatch.setenv("RERANK_TOP_N", "eleven")
+    with pytest.raises(MissingSettingError, match="must be an integer"):
+        ApiSettings.from_env()

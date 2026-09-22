@@ -62,10 +62,22 @@ and skip instead. 52 of the 68 tests in `test_deepeval_eval.py` run without it.
 - `test_providers.py` — embedder/generator registries, the dimension guard, the
   shared backoff policy, and that query embedding reuses the document path.
 - `test_core.py` — `RAGPipeline` orchestration: ordered sources, score floor,
-  filter pass-through, stage timings, no-match and empty-answer fallbacks.
+  filter pass-through, stage timings, no-match and empty-answer fallbacks, and
+  the rerank stage (reordering, the cutoff, `top_n`, and that sources stay in
+  the order the prompt used — citations are resolved positionally against it).
+- `test_rerank.py` — the rerank registry, the Pinecone provider driven through
+  an injected fake session (payload shape, score mapping, the 100-document
+  ceiling, quota-vs-pacing classification), and `FailOpenReranker`: degrade
+  without raising, latch only on an exhausted quota, re-arm on a clock, and
+  warn exactly once under concurrency.
+- `test_live.py` — `evaluation/live.py`, the shared definition of "the system
+  under test": that its pipeline searches the same namespaces as serving, and
+  that reranking is mirrored into `retrieve()` — `run_eval` without
+  `--generate` never builds a pipeline, so a stage missing here would report
+  the unranked baseline as the reranked result.
 - `test_api.py` — routing (`/v1/chat` + legacy `/chat`), health/readiness,
-  citation filtering, error-status mapping, and that upstream error text never
-  reaches the client.
+  citation filtering, error-status mapping, that upstream error text never
+  reaches the client, and the lifespan's optional reranker wiring.
 - `test_frontend.py` — `ChatClient` transport (timeout, retry policy, error
   translation, schema validation) and citation formatting.
 - `test_settings.py` — env parsing/validation and the Pinecone dimension guard.
