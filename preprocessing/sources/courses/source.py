@@ -18,6 +18,8 @@ actually teaches them in the current term.
 
 from __future__ import annotations
 
+from shared.config import COURSES_NAMESPACE
+
 from ..base import (
     Chunk,
     SectionSpec,
@@ -40,9 +42,10 @@ COURSE_SECTIONS: tuple[SectionSpec, ...] = (
 ENTITY_PREFIX = "course-"
 
 #: Pinecone namespace. Courses are a hard partition from people: a query reads
-#: exactly one namespace, so ~6,500 course chunks can never crowd professors
-#: out of the top-k.
-COURSES_NAMESPACE = "courses"
+#: exactly one namespace, so ~10,900 course chunks can never crowd professors
+#: out of the top-k. Defined in ``shared.config`` because serving names it too
+#: (``CHAT_NAMESPACES``), and re-exported here so this source still owns the
+#: reference its own module and ``schedule`` import.
 
 
 class CourseSource(Source):

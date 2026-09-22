@@ -119,12 +119,17 @@ def test_every_registered_source_names_a_namespace():
     assert [s.name for s in SOURCES if not s.namespace] == []
 
 
-def test_the_api_queries_the_namespace_ingest_writes():
-    """The one pairing that fails silently: empty results, never an error."""
-    from preprocessing.sources.profiles.source import ProfileSource
+def test_the_api_searches_every_namespace_ingest_writes():
+    """The one pairing that fails silently: empty results, never an error.
+
+    Every registered source's namespace must be searchable, or that corpus is
+    ingested, paid for, and unreachable — which is exactly what happened to the
+    10,948 course vectors between landing them and wiring CHAT_NAMESPACES.
+    """
+    from preprocessing.sources.registry import SOURCES
     from shared.settings import ApiSettings
 
-    assert ApiSettings().namespace == ProfileSource().namespace
+    assert {s.namespace for s in SOURCES} == set(ApiSettings().namespaces)
 
 
 def test_registry_rejects_a_dependent_source_alone_in_its_namespace():
@@ -174,11 +179,11 @@ def test_collect_chunks_groups_by_namespace():
 def test_pipeline_passes_the_namespace_to_the_retriever():
     from core.pipeline import RAGPipeline
 
-    seen = {}
+    seen: dict = {}
 
     class _Retriever:
         def retrieve(self, query_embedding, top_k, filters=None, namespace=None):
-            seen["namespace"] = namespace
+            seen.setdefault("namespaces", []).append(namespace)
             return []
 
     class _Embedder:
@@ -187,17 +192,19 @@ def test_pipeline_passes_the_namespace_to_the_retriever():
 
     pipeline = RAGPipeline(
         embedder=_Embedder(), retriever=_Retriever(), generator=None, top_k=8, min_score=0.0,
-        namespace=PEOPLE_NAMESPACE,
+        namespaces=(PEOPLE_NAMESPACE, COURSES_NAMESPACE),
     )
 
-    # Explicit wins...
-    pipeline.answer("what does CS 3800 cover?", namespace="courses")
-    assert seen["namespace"] == "courses"
+    # An explicit namespace restricts the search to exactly that one, which is
+    # how the eval harness scores a case against the corpus that owns it.
+    pipeline.answer("what does CS 3800 cover?", namespace=COURSES_NAMESPACE)
+    assert seen["namespaces"] == [COURSES_NAMESPACE]
 
-    # ...and omitting it falls back to the one the pipeline was built with,
-    # rather than silently querying the unnamed default partition.
+    # Omitting it searches every namespace the pipeline was built with, rather
+    # than silently querying the unnamed default partition.
+    seen.clear()
     pipeline.answer("who works on compilers?")
-    assert seen["namespace"] == PEOPLE_NAMESPACE
+    assert seen["namespaces"] == [PEOPLE_NAMESPACE, COURSES_NAMESPACE]
 
 
 # --- ingestable guards -----------------------------------------------------

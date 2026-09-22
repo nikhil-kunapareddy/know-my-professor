@@ -12,7 +12,7 @@ Required env:
   PINECONE_API_KEY, plus the selected providers' keys
   (MISTRAL_API_KEY for embedding, LLAMA_API_KEY for generation by default)
 Optional env:
-  PINECONE_INDEX_NAME, PINECONE_NAMESPACE, EMBED_PROVIDER, CHAT_PROVIDER,
+  PINECONE_INDEX_NAME, PINECONE_NAMESPACES, EMBED_PROVIDER, CHAT_PROVIDER,
   LLAMA_CHAT_MODEL, TOP_K, MIN_RETRIEVAL_SCORE, REQUEST_BUDGET_SECONDS
 """
 
@@ -73,17 +73,17 @@ async def lifespan(_app: FastAPI):
     state["settings"] = settings
     state["index"] = index
     state["ready_until"] = 0.0
-    # A Pinecone query reads exactly ONE namespace, so this is not a hint:
-    # naming the wrong partition returns nothing and every answer silently
-    # becomes the no-answer string. The people corpus is the only one the API
-    # serves today; course questions need intent routing first.
+    # One query reads exactly ONE namespace, so serving both corpora means one
+    # query each -- and each gets its own top_k, because a course description
+    # outscores the bio of the person who researches that topic. See
+    # RAGPipeline.answer.
     state["pipeline"] = RAGPipeline(
         embedder=embedder,
         retriever=PineconeRetriever(index),
         generator=generator,
         top_k=settings.top_k,
         min_score=settings.min_score,
-        namespace=settings.namespace,
+        namespaces=settings.namespaces,
     )
 
     log(
@@ -93,7 +93,7 @@ async def lifespan(_app: FastAPI):
         chat_provider=settings.chat_provider,
         chat_model=generator.model,
         index=settings.index_name,
-        namespace=settings.namespace,
+        namespaces=list(settings.namespaces),
         top_k=settings.top_k,
         min_score=settings.min_score,
     )
