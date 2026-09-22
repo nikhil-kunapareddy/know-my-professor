@@ -1,0 +1,99 @@
+{
+  "cases": 15,
+  "pairs": 90,
+  "agreement": 0.5111111111111111,
+  "cohens_kappa": 0.3208712056251071,
+  "per_case": [
+    {
+      "case_id": "blended-cs5700",
+      "pairs": 6,
+      "agree": 3,
+      "rate": 0.5
+    },
+    {
+      "case_id": "broad-computer-vision",
+      "pairs": 6,
+      "agree": 3,
+      "rate": 0.5
+    },
+    {
+      "case_id": "lookup-donald-omalley",
+      "pairs": 6,
+      "agree": 3,
+      "rate": 0.5
+    },
+    {
+      "case_id": "trap-dean-of-plt",
+      "pairs": 6,
+      "agree": 3,
+      "rate": 0.5
+    },
+    {
+      "case_id": "blended-cy6760",
+      "pairs": 6,
+      "agree": 3,
+      "rate": 0.5
+    },
+    {
+      "case_id": "broad-cryptography",
+      "pairs": 6,
+      "agree": 0,
+      "rate": 0.0
+    },
+    {
+      "case_id": "lookup-mark-patterson",
+      "pairs": 6,
+      "agree": 1,
+      "rate": 0.16666666666666666
+    },
+    {
+      "case_id": "trap-mit-quantum-lab",
+      "pairs": 6,
+      "agree": 4,
+      "rate": 0.6666666666666666
+    },
+    {
+      "case_id": "blended-ds3050",
+      "pairs": 6,
+      "agree": 6,
+      "rate": 1.0
+    },
+    {
+      "case_id": "broad-hci",
+      "pairs": 6,
+      "agree": 1,
+      "rate": 0.16666666666666666
+    },
+    {
+      "case_id": "lookup-max-bi",
+      "pairs": 6,
+      "agree": 2,
+      "rate": 0.3333333333333333
+    },
+    {
+      "case_id": "trap-nobel-laureate",
+      "pairs": 6,
+      "agree": 4,
+      "rate": 0.6666666666666666
+    },
+    {
+      "case_id": "blended-math7233",
+      "pairs": 6,
+      "agree": 2,
+      "rate": 0.3333333333333333
+    },
+    {
+      "case_id": "broad-programming-languages",
+      "pairs": 6,
+      "agree": 6,
+      "rate": 1.0
+    },
+    {
+      "case_id": "lookup-patricia-mabrouk",
+      "pairs": 6,
+      "agree": 5,
+      "rate": 0.8333333333333334
+    }
+  ],
+  "note": "INTER-JUDGE agreement (Claude Opus 5 vs Claude Fable 5.1), not human validation. Cannot detect a bias the two models share."
+}

@@ -1,0 +1,170 @@
+{
+  "arms": [
+    {
+      "arm": "opus5-low",
+      "model": "claude-opus-5",
+      "effort": "low",
+      "mean_rank": 1.4333333333333333,
+      "ranked_n": 180,
+      "accept_rate": 0.8111111111111111,
+      "accept_n": 180,
+      "refusal_correct": 10,
+      "refusal_total": 10,
+      "p50_generate_ms": 3377.1,
+      "p95_generate_ms": 6381.6,
+      "mean_input_tokens": 4240.84,
+      "mean_output_tokens": 181.61,
+      "mean_answer_chars": 445.59,
+      "cost_per_query": 0.02574445,
+      "cost_per_1k": 25.744449999999997,
+      "truncated": 0,
+      "refused_by_safety": 0,
+      "errors": 0,
+      "mean_rank_by_stratum": {
+        "blended": [
+          1.425,
+          40
+        ],
+        "broad": [
+          1.3541666666666667,
+          48
+        ],
+        "lookup": [
+          1.4722222222222223,
+          72
+        ],
+        "trap": [
+          1.5,
+          20
+        ]
+      }
+    },
+    {
+      "arm": "opus5-med",
+      "model": "claude-opus-5",
+      "effort": "medium",
+      "mean_rank": 1.4944444444444445,
+      "ranked_n": 180,
+      "accept_rate": 0.7944444444444444,
+      "accept_n": 180,
+      "refusal_correct": 8,
+      "refusal_total": 10,
+      "p50_generate_ms": 3772.8,
+      "p95_generate_ms": 7455.3,
+      "mean_input_tokens": 4240.84,
+      "mean_output_tokens": 217.34,
+      "mean_answer_chars": 517.22,
+      "cost_per_query": 0.0266377,
+      "cost_per_1k": 26.6377,
+      "truncated": 0,
+      "refused_by_safety": 0,
+      "errors": 0,
+      "mean_rank_by_stratum": {
+        "blended": [
+          1.4,
+          40
+        ],
+        "broad": [
+          1.4375,
+          48
+        ],
+        "lookup": [
+          1.5277777777777777,
+          72
+        ],
+        "trap": [
+          1.7,
+          20
+        ]
+      }
+    },
+    {
+      "arm": "sonnet5-med",
+      "model": "claude-sonnet-5",
+      "effort": "medium",
+      "mean_rank": 1.6666666666666667,
+      "ranked_n": 180,
+      "accept_rate": 0.7833333333333333,
+      "accept_n": 180,
+      "refusal_correct": 10,
+      "refusal_total": 10,
+      "p50_generate_ms": 2054.0,
+      "p95_generate_ms": 4333.7,
+      "mean_input_tokens": 4240.84,
+      "mean_output_tokens": 127.81,
+      "mean_answer_chars": 347.32,
+      "cost_per_query": 0.00975978,
+      "cost_per_1k": 9.75978,
+      "truncated": 0,
+      "refused_by_safety": 0,
+      "errors": 0,
+      "mean_rank_by_stratum": {
+        "blended": [
+          1.35,
+          40
+        ],
+        "broad": [
+          1.6875,
+          48
+        ],
+        "lookup": [
+          1.8472222222222223,
+          72
+        ],
+        "trap": [
+          1.6,
+          20
+        ]
+      }
+    },
+    {
+      "arm": "haiku45",
+      "model": "claude-haiku-4-5",
+      "effort": null,
+      "mean_rank": 1.6555555555555554,
+      "ranked_n": 180,
+      "accept_rate": 0.7722222222222223,
+      "accept_n": 180,
+      "refusal_correct": 10,
+      "refusal_total": 10,
+      "p50_generate_ms": 1922.5,
+      "p95_generate_ms": 3298.7,
+      "mean_input_tokens": 2854.18,
+      "mean_output_tokens": 122.02,
+      "mean_answer_chars": 528.46,
+      "cost_per_query": 0.00346428,
+      "cost_per_1k": 3.46428,
+      "truncated": 0,
+      "refused_by_safety": 0,
+      "errors": 0,
+      "mean_rank_by_stratum": {
+        "blended": [
+          1.325,
+          40
+        ],
+        "broad": [
+          1.8125,
+          48
+        ],
+        "lookup": [
+          1.8888888888888888,
+          72
+        ],
+        "trap": [
+          1.1,
+          20
+        ]
+      }
+    }
+  ],
+  "diagnostics": {
+    "order_flips": 45,
+    "order_pairs": 90,
+    "order_flip_rate": 0.5,
+    "judge_errors": 0,
+    "cases_with_divergent_chunks": [],
+    "total_cost_usd": 6.560620999999994
+  },
+  "winner": null,
+  "why": "the rule declined to fire -- no arm cleared every gate. opus5-low fails accept<0.95; opus5-med fails accept<0.95+refusals; sonnet5-med fails accept<0.95; haiku45 fails accept<0.95. The incumbent stays; that is a result, not a failure."
+}
