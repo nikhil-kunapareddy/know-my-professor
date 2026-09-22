@@ -4,6 +4,27 @@
 sources predate the reranker, so no question can have been shaped, even
 unconsciously, by what the reranker happens to do well.
 
+## Result (run 2026-09-22)
+
+Full write-up: [`evaluation/results/2026-09-22-rerank/notes.md`](../results/2026-09-22-rerank/notes.md).
+Replay it free with `python -m evaluation.rerank --from-dump`.
+
+**Reranking helps, modestly. The cutoff does not — ship none.**
+
+- **MRR 0.852 -> 0.900** at k=11; precision@8 **59.6% -> 62.7%**. Recall
+  identical at full depth, as it must be.
+- The gain is concentrated: **`courses-narrow` +0.152 MRR**, the stratum with
+  the worst precision in the corpus (15.2%). Pooling hides this.
+- `people-narrow` regressed -0.100, from a starting 1.000 on n=5.
+- The blended control came out **flat**, as pre-registered.
+- **No cutoff survives.** Relevant chunks median 0.121 vs irrelevant 0.003 —
+  40x apart, far better than cosine ever gave — but the tails overlap and the
+  cheapest nonzero cutoff already discards 36% of relevant chunks. The
+  originally proposed **0.5 would discard 83%**.
+
+`RERANK_MIN_SCORE` therefore stays `0.0`. Reranking is worth having for the
+ORDER it produces, not for a number to threshold on.
+
 ## Composition
 
 | source | cases | namespace | stratum |
