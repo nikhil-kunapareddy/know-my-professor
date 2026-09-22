@@ -13,7 +13,11 @@ Required env:
   (MISTRAL_API_KEY for embedding, LLAMA_API_KEY for generation by default)
 Optional env:
   PINECONE_INDEX_NAME, PINECONE_NAMESPACES, EMBED_PROVIDER, CHAT_PROVIDER,
-  LLAMA_CHAT_MODEL, TOP_K, MIN_RETRIEVAL_SCORE, REQUEST_BUDGET_SECONDS
+  LLAMA_CHAT_MODEL, TOP_K, MIN_RETRIEVAL_SCORE, REQUEST_BUDGET_SECONDS,
+  RERANK_MODEL, RERANK_MIN_SCORE, RERANK_TOP_N, RERANK_RETRY_AFTER_SECONDS
+Reranking is ON by default (RERANK_PROVIDER=pinecone). Set RERANK_PROVIDER to
+"none"/"off"/"false"/"0"/"disabled" to turn it off without a rebuild; it reuses
+PINECONE_API_KEY, so it needs no new secret.
 """
 
 from __future__ import annotations
@@ -32,6 +36,7 @@ from pinecone import Pinecone
 
 from core.llm import build_generator
 from core.pipeline import RAGPipeline
+from core.rerank import FailOpenReranker, build_reranker
 from core.retrieval.pinecone_retriever import PineconeRetriever
 from shared.embeddings import build_embedder
 from shared.schemas import API_VERSION, ChatRequest, ChatResponse, ErrorResponse
@@ -62,9 +67,19 @@ async def lifespan(_app: FastAPI):
     embedder = build_embedder(settings.embed_provider)
     generator = build_generator(settings.chat_provider, model=settings.chat_model)
 
+    # Optional second stage: absent unless a deployment names a provider, and
+    # wrapped so that losing it degrades the answer instead of the service.
+    reranker = None
+    if settings.rerank_provider:
+        reranker = FailOpenReranker(
+            build_reranker(settings.rerank_provider, model=settings.rerank_model),
+            retry_after_seconds=settings.rerank_retry_after_seconds,
+        )
+
     # Providers read their keys lazily, which would turn a missing key into a
     # 502 on the first user request. Check now so the revision fails to boot.
-    for provider in (embedder, generator):
+    # The reranker is filtered out when absent -- None has no api_key_env.
+    for provider in (p for p in (embedder, generator, reranker) if p is not None):
         if provider.api_key_env:
             require_env(provider.api_key_env)
 
@@ -84,6 +99,9 @@ async def lifespan(_app: FastAPI):
         top_k=settings.top_k,
         min_score=settings.min_score,
         namespaces=settings.namespaces,
+        reranker=reranker,
+        rerank_min_score=settings.rerank_min_score,
+        rerank_top_n=settings.rerank_top_n,
     )
 
     log(
@@ -96,6 +114,10 @@ async def lifespan(_app: FastAPI):
         namespaces=list(settings.namespaces),
         top_k=settings.top_k,
         min_score=settings.min_score,
+        rerank_provider=settings.rerank_provider,
+        rerank_model=reranker.model if reranker else None,
+        rerank_min_score=settings.rerank_min_score if reranker else None,
+        rerank_top_n=settings.rerank_top_n if reranker else None,
     )
     yield
 
@@ -190,6 +212,10 @@ async def chat(req: ChatRequest) -> Any:
         retrieved=result.retrieved,
         kept=len(result.sources),
         cited=len(citations),
+        # False here while a reranker IS configured means it degraded -- out of
+        # quota or unreachable. The one-off WARNING says why; this field is how
+        # you tell which answers were affected.
+        reranked=result.reranked,
         answer_chars=len(result.answer),
         duration_ms=round((time.perf_counter() - started) * 1000, 1),
         **{f"stage_{k}_ms": v for k, v in result.timings_ms.items()},

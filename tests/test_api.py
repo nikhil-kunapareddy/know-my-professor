@@ -8,6 +8,8 @@ they exercise routing, citation filtering, and error mapping only.
 
 from __future__ import annotations
 
+import logging
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -218,3 +220,82 @@ def test_error_body_carries_the_request_id_for_log_correlation(client):
 def test_classifier_categorises_provider_errors(exc, expected_status, expected_code):
     classified = classify_upstream_error(exc)
     assert (classified.status_code, classified.code) == (expected_status, expected_code)
+
+
+# --- reranker wiring in lifespan -------------------------------------------
+
+
+class _Stub:
+    """Stands in for any provider the lifespan builds."""
+
+    default_model = "stub"
+    max_documents = 100
+
+    def __init__(self, name="stub"):
+        self.model = name
+        self.api_key_env = None
+
+    def rerank(self, query, results, top_n=None):
+        return list(results)
+
+
+@pytest.fixture
+def booted(monkeypatch):
+    """Runs the real lifespan with every provider and Pinecone stubbed out."""
+    monkeypatch.setenv("PINECONE_API_KEY", "pk")
+    monkeypatch.setattr(app_module, "build_embedder", lambda *a, **k: _Stub("embed"))
+    monkeypatch.setattr(app_module, "build_generator", lambda *a, **k: _Stub("chat"))
+    monkeypatch.setattr(
+        app_module, "Pinecone", lambda **k: type("C", (), {"Index": lambda s, n: object()})()
+    )
+    app_module.state.clear()
+    yield
+    app_module.state.clear()
+
+
+def test_lifespan_builds_a_reranker_by_default(booted, monkeypatch):
+    """Reranking is ON without any RERANK_* var being set."""
+    monkeypatch.delenv("RERANK_PROVIDER", raising=False)
+    asked = []
+    monkeypatch.setattr(
+        app_module, "build_reranker", lambda provider, **k: asked.append(provider) or _Stub("rr")
+    )
+
+    with TestClient(app_module.app):
+        assert isinstance(app_module.state["pipeline"].reranker, app_module.FailOpenReranker)
+    assert asked == ["pinecone"]
+
+
+def test_lifespan_skips_the_reranker_when_switched_off(booted, monkeypatch):
+    """The rollback path: no rebuild, no code change, no boot failure."""
+    monkeypatch.setenv("RERANK_PROVIDER", "none")
+    called = []
+    monkeypatch.setattr(app_module, "build_reranker", lambda *a, **k: called.append(a))
+
+    with TestClient(app_module.app):
+        assert app_module.state["pipeline"].reranker is None
+    assert called == []
+
+
+def test_lifespan_wraps_the_reranker_so_it_can_fail_open(booted, monkeypatch):
+    monkeypatch.setenv("RERANK_PROVIDER", "pinecone")
+    monkeypatch.setenv("RERANK_MIN_SCORE", "0.5")
+    monkeypatch.setattr(app_module, "build_reranker", lambda *a, **k: _Stub("rerank"))
+
+    with TestClient(app_module.app):
+        pipeline = app_module.state["pipeline"]
+        assert isinstance(pipeline.reranker, app_module.FailOpenReranker)
+        assert pipeline.reranker.model == "rerank"
+        assert pipeline.rerank_min_score == 0.5
+
+
+def test_chat_logs_whether_the_answer_was_reranked(client, caplog):
+    """False while a reranker IS configured means it degraded — the only way
+    to tell which answers were served without one."""
+    _install(_FakePipeline(RAGResult(answer="hi [1]", sources=[_source("Ann")], reranked=False)))
+
+    with caplog.at_level(logging.INFO, logger="kmp.api"):
+        assert client.post("/v1/chat", json={"question": "who does PL?"}).status_code == 200
+
+    ok = [r for r in caplog.records if r.getMessage() == "chat ok"]
+    assert ok and ok[0].context["reranked"] is False

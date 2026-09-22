@@ -19,11 +19,16 @@ from shared.config import (
     CHAT_NAMESPACES,
     DEFAULT_CHAT_PROVIDER,
     DEFAULT_EMBED_PROVIDER,
+    DEFAULT_RERANK_MIN_SCORE,
+    DEFAULT_RERANK_PROVIDER,
+    DEFAULT_RERANK_RETRY_AFTER_SECONDS,
+    DEFAULT_RERANK_TOP_N,
     DEFAULT_TOP_K,
     MIN_RETRIEVAL_SCORE,
     PINECONE_DEFAULT_CLOUD,
     PINECONE_DEFAULT_INDEX,
     PINECONE_DEFAULT_REGION,
+    RERANK_DISABLED_VALUES,
 )
 
 
@@ -40,6 +45,38 @@ def require_env(name: str) -> str:
 
 
 def _int_env(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None or raw == "":
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        raise MissingSettingError(f"env var {name} must be an integer, got {raw!r}") from None
+
+
+def _rerank_provider_env() -> str | None:
+    """RERANK_PROVIDER, where "none"/"off"/"false"/"0"/"disabled" mean no reranker.
+
+    The plain ``os.environ.get(X) or DEFAULT`` idiom used for every other
+    provider cannot express "off" here, because the default is truthy: an empty
+    or unset value falls back to "pinecone". Reranking must stay switchable
+    without a rebuild -- it is the rollback for a feature that costs quota --
+    so the disabling values are explicit.
+    """
+    raw = os.environ.get("RERANK_PROVIDER")
+    if raw is None or not raw.strip():
+        return DEFAULT_RERANK_PROVIDER
+    value = raw.strip()
+    return None if value.lower() in RERANK_DISABLED_VALUES else value
+
+
+def _optional_int_env(name: str, default: int | None) -> int | None:
+    """Like ``_int_env`` but for a knob whose "unset" value is None.
+
+    Kept separate rather than folded in because None and 0 mean different
+    things to every caller: RERANK_TOP_N=0 would keep no chunks at all, so it
+    cannot double as the sentinel for "keep them all".
+    """
     raw = os.environ.get(name)
     if raw is None or raw == "":
         return default
@@ -85,6 +122,14 @@ class ApiSettings:
     namespaces: tuple[str, ...] = CHAT_NAMESPACES
     top_k: int = DEFAULT_TOP_K
     min_score: float = MIN_RETRIEVAL_SCORE
+    #: None disables reranking entirely, which is the default. Every rerank
+    #: setting below is inert while this is unset.
+    rerank_provider: str | None = DEFAULT_RERANK_PROVIDER
+    #: None means "let the chosen reranker pick its own default_model".
+    rerank_model: str | None = None
+    rerank_min_score: float = DEFAULT_RERANK_MIN_SCORE
+    rerank_top_n: int | None = DEFAULT_RERANK_TOP_N
+    rerank_retry_after_seconds: float = DEFAULT_RERANK_RETRY_AFTER_SECONDS
     pinecone_api_key: str = ""
 
     @classmethod
@@ -97,6 +142,13 @@ class ApiSettings:
             namespaces=_csv_env("PINECONE_NAMESPACES", CHAT_NAMESPACES),
             top_k=_int_env("TOP_K", DEFAULT_TOP_K),
             min_score=_float_env("MIN_RETRIEVAL_SCORE", MIN_RETRIEVAL_SCORE),
+            rerank_provider=_rerank_provider_env(),
+            rerank_model=os.environ.get("RERANK_MODEL") or None,
+            rerank_min_score=_float_env("RERANK_MIN_SCORE", DEFAULT_RERANK_MIN_SCORE),
+            rerank_top_n=_optional_int_env("RERANK_TOP_N", DEFAULT_RERANK_TOP_N),
+            rerank_retry_after_seconds=_float_env(
+                "RERANK_RETRY_AFTER_SECONDS", DEFAULT_RERANK_RETRY_AFTER_SECONDS
+            ),
             pinecone_api_key=require_env("PINECONE_API_KEY"),
         )
 

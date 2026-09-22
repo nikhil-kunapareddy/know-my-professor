@@ -113,3 +113,79 @@ def test_assert_dimension_reads_dict_descriptions():
 def test_assert_dimension_tolerates_an_unreadable_description():
     """An SDK shape change should not block an otherwise valid ingest."""
     PineconeStore.assert_dimension(object(), "idx", 1024)
+
+
+# --- rerank settings -------------------------------------------------------
+
+
+def test_rerank_is_on_by_default(monkeypatch):
+    """On, because it was measured to help and losing it is safe.
+
+    MRR 0.852 -> 0.900 (evaluation/results/2026-09-22-rerank). Affordable as a
+    default only because the free tier running out degrades to plain cosine
+    order rather than failing -- see FailOpenReranker.
+    """
+    monkeypatch.setenv("PINECONE_API_KEY", "pk")
+    for name in ("RERANK_PROVIDER", "RERANK_MODEL", "RERANK_MIN_SCORE",
+                 "RERANK_TOP_N", "RERANK_RETRY_AFTER_SECONDS"):
+        monkeypatch.delenv(name, raising=False)
+
+    settings = ApiSettings.from_env()
+    assert settings.rerank_provider == "pinecone"
+    assert settings.rerank_model is None  # the provider picks its own
+    assert settings.rerank_top_n is None
+    # 0.0, measured: relevant and irrelevant rerank scores overlap in the tails,
+    # so the cheapest nonzero cutoff already discards 36% of relevant chunks.
+    assert settings.rerank_min_score == 0.0
+
+
+@pytest.mark.parametrize("value", ["none", "off", "FALSE", "0", "disabled", "None"])
+def test_rerank_can_be_switched_off_without_a_rebuild(monkeypatch, value):
+    """The rollback path, and it needs a sentinel to exist at all.
+
+    `os.environ.get(X) or DEFAULT` cannot express "off" once DEFAULT is truthy
+    -- an empty value falls straight back to "pinecone". Without these words
+    the only way to disable reranking would be a code change and a redeploy.
+    """
+    monkeypatch.setenv("PINECONE_API_KEY", "pk")
+    monkeypatch.setenv("RERANK_PROVIDER", value)
+    assert ApiSettings.from_env().rerank_provider is None
+
+
+def test_an_empty_rerank_provider_falls_back_to_the_default(monkeypatch):
+    """Blank is "unset", not "off" -- otherwise a stray var silently disables it."""
+    monkeypatch.setenv("PINECONE_API_KEY", "pk")
+    monkeypatch.setenv("RERANK_PROVIDER", "   ")
+    assert ApiSettings.from_env().rerank_provider == "pinecone"
+
+
+def test_rerank_settings_read_overrides(monkeypatch):
+    monkeypatch.setenv("PINECONE_API_KEY", "pk")
+    monkeypatch.setenv("RERANK_PROVIDER", "pinecone")
+    monkeypatch.setenv("RERANK_MODEL", "pinecone-rerank-v0")
+    monkeypatch.setenv("RERANK_MIN_SCORE", "0.5")
+    monkeypatch.setenv("RERANK_TOP_N", "8")
+    monkeypatch.setenv("RERANK_RETRY_AFTER_SECONDS", "60")
+
+    settings = ApiSettings.from_env()
+    assert settings.rerank_provider == "pinecone"
+    assert settings.rerank_model == "pinecone-rerank-v0"
+    assert (settings.rerank_min_score, settings.rerank_top_n) == (0.5, 8)
+    assert settings.rerank_retry_after_seconds == 60.0
+
+
+def test_rerank_top_n_distinguishes_unset_from_zero(monkeypatch):
+    """None keeps every chunk; 0 would keep none, so they cannot share a value."""
+    monkeypatch.setenv("PINECONE_API_KEY", "pk")
+    monkeypatch.setenv("RERANK_TOP_N", "0")
+    assert ApiSettings.from_env().rerank_top_n == 0
+
+    monkeypatch.setenv("RERANK_TOP_N", "")
+    assert ApiSettings.from_env().rerank_top_n is None
+
+
+def test_rerank_numeric_settings_reject_garbage(monkeypatch):
+    monkeypatch.setenv("PINECONE_API_KEY", "pk")
+    monkeypatch.setenv("RERANK_TOP_N", "eleven")
+    with pytest.raises(MissingSettingError, match="must be an integer"):
+        ApiSettings.from_env()
