@@ -14,12 +14,16 @@ Usage:
     python -m preprocessing.sources.profiles.runner --college cos --limit 5
     python -m preprocessing.sources.profiles.runner --urls-only            # discovery only
     python -m preprocessing.sources.profiles.runner --gcs-bucket BUCKET    # write to GCS
+
+On Cloud Run, ``gcloud run jobs execute scrape-profiles --tasks=N`` splits the
+colleges across N parallel tasks (see ``_shard``).
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict
@@ -151,12 +155,29 @@ def _resolve_colleges(requested: str | None) -> list[College]:
     return [COLLEGES_BY_KEY[k] for k in keys]
 
 
+def _shard(colleges: list[College]) -> list[College]:
+    """This task's share of the colleges when the Job runs with ``--tasks N``.
+
+    Cloud Run sets ``CLOUD_RUN_TASK_INDEX``/``COUNT`` on every task. Colleges
+    share nothing -- own host, own crawl delay, own record keys and URL cache --
+    so tasks split by college with nothing to coordinate, and the run takes as
+    long as the slowest college rather than all of them in a row. Unset (a
+    local run, or a one-task Job) means every college.
+    """
+    index = int(os.environ.get("CLOUD_RUN_TASK_INDEX", "0"))
+    count = int(os.environ.get("CLOUD_RUN_TASK_COUNT", "1"))
+    return colleges[index::count]
+
+
 def run_college(college: College, store: OutputStore, args) -> tuple[int, int]:
     """Discover and scrape one college. Returns (written, failed)."""
     print(f"\n=== {college.key} ({college.base}) — {college.parser} parser ===")
     fetcher = DirectoryFetcher(college)
 
-    cached = store.read_text(_urls_key(college))
+    # The cache exists because a listing walk costs a request per page. A
+    # sitemap costs one or two, so sitemap colleges re-read it every run and
+    # the monthly cron picks up new hires without --refresh-urls.
+    cached = None if college.sitemaps else store.read_text(_urls_key(college))
     if cached and not args.refresh_urls:
         urls = json.loads(cached)
         print(f"Using cached URL list ({len(urls)} entries) — pass --refresh-urls to rediscover.")
@@ -197,7 +218,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    colleges = _resolve_colleges(args.college)
+    colleges = _shard(_resolve_colleges(args.college))
     store = _build_store(args.gcs_bucket)
     print(f"Output store: {store.describe()}")
     print(f"Colleges: {', '.join(c.key for c in colleges)}")

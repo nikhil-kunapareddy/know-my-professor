@@ -170,8 +170,126 @@ def test_pacer_holds_the_delay_across_concurrent_callers():
 
 
 def test_crawl_delay_is_honoured_per_college():
-    assert COLLEGES_BY_KEY["camd"].crawl_delay == 10.0  # camd's robots.txt asks for it
+    for key in ("camd", "cssh", "bouve", "law"):  # each robots.txt asks for 10s
+        assert COLLEGES_BY_KEY[key].crawl_delay == 10.0, key
     assert KHOURY.crawl_delay == 1.0
+
+
+# --- sitemap discovery -----------------------------------------------------
+
+CSSH = COLLEGES_BY_KEY["cssh"]
+
+
+def test_profile_paths_other_than_people():
+    assert CSSH.profile_url_re.match("https://cssh.northeastern.edu/faculty/barry-bluestone/")
+    assert CSSH.profile_url_re.match("https://cssh.northeastern.edu/person/carlos-monteiro/")
+    assert not CSSH.profile_url_re.match("https://cssh.northeastern.edu/faculty/")
+    # WordPress leaves deleted posts in the sitemap under this slug
+    assert not CSSH.profile_url_re.match("https://cssh.northeastern.edu/person/__trashed/")
+    assert COLLEGES_BY_KEY["law"].profile_url_re.match("https://law.northeastern.edu/faculty/medwed/")
+    assert COLLEGES_BY_KEY["bouve"].profile_url_re.match(
+        "https://bouve.northeastern.edu/directory/laurie-kramer/"
+    )
+    # COE's sitemap also lists per-professor subpages; the profile is the root
+    assert not COLLEGES_BY_KEY["coe"].profile_url_re.match(
+        "https://coe.northeastern.edu/people/slavov-nikolai/research/"
+    )
+
+
+def test_sitemap_url_re_selects_only_the_profile_post_types():
+    base = "https://cssh.northeastern.edu"
+    wanted = [f"{base}/faculty-sitemap.xml", f"{base}/faculty-sitemap2.xml", f"{base}/person-sitemap.xml"]
+    unwanted = [
+        f"{base}/faculty_type-sitemap.xml",      # a taxonomy, not profiles
+        f"{base}/post-sitemap.xml",
+        f"{base}/economics/sitemap_index.xml",   # a department subsite
+        "https://law.northeastern.edu/faculty-sitemap.xml",
+    ]
+    assert [u for u in wanted + unwanted if CSSH.sitemap_url_re.match(u)] == wanted
+
+
+def test_listing_walk_colleges_have_no_sitemaps():
+    """Khoury and CoS were discovered by listing walk; switching them is a separate change."""
+    assert not KHOURY.sitemaps and not COS.sitemaps
+    assert all(c.sitemaps for c in COLLEGES if c.key not in (DEFAULT_COLLEGE, "cos"))
+
+
+def test_extract_sitemap_locs_unescapes_and_strips():
+    from preprocessing.sources.profiles.fetcher import DirectoryFetcher
+
+    xml = "<urlset><url><loc> https://x.edu/a/?p=1&amp;q=2 </loc></url><url><loc>https://x.edu/b/</loc></url></urlset>"
+    assert DirectoryFetcher.extract_sitemap_locs(xml) == ["https://x.edu/a/?p=1&q=2", "https://x.edu/b/"]
+
+
+def _sitemap(*locs):
+    return "<urlset>" + "".join(f"<url><loc>{u}</loc></url>" for u in locs) + "</urlset>"
+
+
+def _fetcher(college, pages):
+    from preprocessing.sources.profiles.fetcher import DirectoryFetcher
+
+    fetcher = DirectoryFetcher(college)
+    fetcher.fetch = pages.__getitem__  # KeyError on any URL the test didn't expect
+    return fetcher
+
+
+def test_discover_reads_every_profile_sitemap_the_index_names():
+    base = "https://cssh.northeastern.edu"
+    college = dataclasses.replace(CSSH, crawl_delay=0)
+    pages = {
+        f"{base}/sitemap_index.xml": _sitemap(
+            f"{base}/faculty-sitemap.xml", f"{base}/faculty-sitemap2.xml",
+            f"{base}/person-sitemap.xml", f"{base}/post-sitemap.xml",
+        ),
+        f"{base}/faculty-sitemap.xml": _sitemap(f"{base}/faculty/", f"{base}/faculty/zed-a/"),
+        f"{base}/faculty-sitemap2.xml": _sitemap(f"{base}/faculty/amy-b/"),
+        f"{base}/person-sitemap.xml": _sitemap(f"{base}/person/__trashed/", f"{base}/person/cy-c/"),
+    }
+    assert _fetcher(college, pages).discover_all_profile_urls() == [
+        f"{base}/faculty/amy-b/", f"{base}/faculty/zed-a/", f"{base}/person/cy-c/",
+    ]
+
+
+def test_discover_raises_when_no_sitemap_matches():
+    """A renamed post type must not read as a college with zero faculty."""
+    college = dataclasses.replace(CSSH, crawl_delay=0)
+    pages = {college.sitemap_index: _sitemap("https://cssh.northeastern.edu/post-sitemap.xml")}
+    with pytest.raises(RuntimeError, match="no sitemap"):
+        _fetcher(college, pages).discover_all_profile_urls()
+
+
+def _run_discovery(college, store, monkeypatch):
+    """Run ``run_college`` in --urls-only mode with discovery stubbed out."""
+    import argparse
+
+    from preprocessing.sources.profiles import runner
+
+    calls = []
+    monkeypatch.setattr(
+        runner.DirectoryFetcher, "discover_all_profile_urls",
+        lambda self: calls.append(self.college.key) or ["https://fresh.example/"],
+    )
+    args = argparse.Namespace(refresh_urls=False, urls_only=True, limit=None, workers=1)
+    runner.run_college(college, store, args)
+    return calls
+
+
+def test_sitemap_colleges_ignore_a_cached_url_list(tmp_path, monkeypatch):
+    """Otherwise the 12-entry list cached by D'Amore-McKim's old listing walk wins forever."""
+    from shared.gcs import LocalStore
+
+    store = LocalStore(tmp_path)
+    store.write_text(_urls_key(CSSH), '["https://stale.example/"]')
+    assert _run_discovery(CSSH, store, monkeypatch) == ["cssh"]
+    assert store.read_text(_urls_key(CSSH)) == '[\n  "https://fresh.example/"\n]'
+
+
+def test_listing_colleges_still_use_their_cached_url_list(tmp_path, monkeypatch):
+    from shared.gcs import LocalStore
+
+    store = LocalStore(tmp_path)
+    store.write_text(_urls_key(COS), '["https://cached.example/"]')
+    assert _run_discovery(COS, store, monkeypatch) == []
 
 
 # --- LLM parser (no network) ----------------------------------------------
@@ -354,3 +472,19 @@ def test_weblinks_legacy_records_keep_bare_ids():
     chunk = WeblinksSource().to_chunks(record)[0]
     assert chunk.vector_id == "olga-vitek#website_summary"
     assert chunk.metadata["college"] == DEFAULT_COLLEGE
+
+
+def test_shard_splits_colleges_across_cloud_run_tasks(monkeypatch):
+    from preprocessing.sources.profiles.runner import _shard
+
+    colleges = list(COLLEGES)
+    assert _shard(colleges) == colleges  # no task env: a local or one-task run gets all
+
+    shares = []
+    for index in range(3):
+        monkeypatch.setenv("CLOUD_RUN_TASK_INDEX", str(index))
+        monkeypatch.setenv("CLOUD_RUN_TASK_COUNT", "3")
+        shares.append(_shard(colleges))
+    # every college runs exactly once, whatever the task count
+    assert sorted(c.key for share in shares for c in share) == sorted(c.key for c in colleges)
+    assert all(shares)
