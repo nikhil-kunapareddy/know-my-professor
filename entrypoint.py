@@ -22,6 +22,8 @@ JOB_MODULES = {
     "courses": "preprocessing.sources.courses.runner",
     "schedule": "preprocessing.sources.schedule.runner",
     "weblinks": "preprocessing.sources.weblinks.runner",
+    "publications": "preprocessing.sources.publications.runner",
+    "grants": "preprocessing.sources.grants.runner",
     "ingest": "preprocessing.ingest.runner",
 }
 

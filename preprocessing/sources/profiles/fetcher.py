@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import time
+from html import unescape
 
 import requests
 from bs4 import BeautifulSoup
@@ -25,9 +26,10 @@ class DirectoryFetcher:
     exposed as static methods so they can be unit-tested without a network.
 
     Defaults to Khoury so existing callers and tests keep working unchanged;
-    pass a ``College`` to walk any other directory. Every college's listing
-    follows the same ``/people/`` + ``/people/page/N/`` shape -- what differs
-    between them is the *profile page* HTML, which is the parser's problem.
+    pass a ``College`` to walk any other directory. Discovery is either a walk
+    of the ``/people/`` + ``/people/page/N/`` listing or a read of the college's
+    sitemaps (see ``College.sitemaps``) -- what differs beyond that is the
+    *profile page* HTML, which is the parser's problem.
     """
 
     def __init__(self, college: College | None = None):
@@ -60,7 +62,40 @@ class DirectoryFetcher:
         soup = BeautifulSoup(listing_html, "html.parser")
         return {a["href"] for a in soup.find_all("a", href=True) if url_re.match(a["href"])}
 
+    @staticmethod
+    def extract_sitemap_locs(sitemap_xml: str) -> list[str]:
+        """Every ``<loc>`` in a sitemap or sitemap index, in document order."""
+        return [unescape(loc) for loc in re.findall(r"<loc>\s*([^<\s]+)\s*</loc>", sitemap_xml)]
+
     def discover_all_profile_urls(self) -> list[str]:
+        """The sorted set of profile URLs, from sitemaps if the college has them."""
+        if self.college.sitemaps:
+            return self._discover_from_sitemaps()
+        return self._discover_from_listing()
+
+    def _discover_from_sitemaps(self) -> list[str]:
+        """Read the sitemap index, then every profile sitemap it names.
+
+        Raises rather than returning nothing when no sitemap matches: a renamed
+        post type would otherwise look like a college with zero faculty.
+        """
+        college = self.college
+        print(f"Discovering profile URLs for '{college.key}' from sitemaps {list(college.sitemaps)}...")
+        index = self.extract_sitemap_locs(self.fetch(college.sitemap_index))
+        sitemaps = [loc for loc in index if college.sitemap_url_re.match(loc)]
+        if not sitemaps:
+            raise RuntimeError(f"no sitemap matching {college.sitemaps} in {college.sitemap_index}")
+
+        all_urls: set[str] = set()
+        for sitemap in sitemaps:
+            time.sleep(college.crawl_delay)
+            new = {u for u in self.extract_sitemap_locs(self.fetch(sitemap)) if college.profile_url_re.match(u)}
+            all_urls |= new
+            print(f"  {sitemap} -> {len(new)} profiles, {len(all_urls)} total")
+
+        return sorted(all_urls)
+
+    def _discover_from_listing(self) -> list[str]:
         """Walk every listing page and return the sorted set of profile URLs.
 
         Some directories under-report their pagination, so the walk keeps going
