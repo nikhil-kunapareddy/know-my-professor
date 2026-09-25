@@ -38,7 +38,7 @@ jobs:
       # dependency set actually resolves on its own.
       - name: Check each deployable's dependencies resolve
         run: |
-          for component in profiles weblinks ingest api frontend; do
+          for component in profiles weblinks publications grants ingest api frontend; do
             echo "--- $component"
             pip install --dry-run --quiet ".[$component]" || exit 1
           done
