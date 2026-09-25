@@ -41,8 +41,14 @@ LOCAL_OUTPUT_DIR = Path(__file__).resolve().parents[3] / "data"
 #   "accordion" -> profile_parser.ProfileParser (exact, free, Khoury-only)
 #   "llm"       -> llm_parser.LlmProfileParser  (trafilatura + Claude, any HTML)
 #
-# robots.txt for every host below was checked to allow /people/ (2026-09-20);
-# camd additionally asks for a 10s crawl delay, which ``crawl_delay`` honours.
+# Discovery differs too. Khoury and CoS are found by walking the paginated
+# /people/ listing. Every other college is found from its Yoast sitemap: their
+# listings render a curated subset (D'Amore-McKim's showed 12 of 512 people,
+# CAMD's 10 of 498), while the sitemap enumerates every published profile.
+#
+# robots.txt for every host below was checked to allow its profile paths
+# (2026-09-20; coe, cssh, bouve, law 2026-09-23). camd, cssh, bouve and law ask
+# for a 10s crawl delay, which ``crawl_delay`` honours.
 
 
 @dataclass(frozen=True)
@@ -53,16 +59,34 @@ class College:
     base: str
     parser: str = "llm"
     crawl_delay: float = SCRAPER_REQUEST_DELAY_SECONDS
+    #: URL segments profile pages live under. Most directories use /people/;
+    #: CSSH (/faculty/ + /person/), Bouvé (/directory/) and Law (/faculty/) don't.
+    profile_paths: tuple[str, ...] = ("people",)
+    #: Yoast sitemap stems to discover profiles from: ``"faculty"`` selects
+    #: ``faculty-sitemap.xml`` and the ``faculty-sitemap2.xml``... pages Yoast
+    #: splits it into past 1,000 entries. Empty means walk the listing instead.
+    sitemaps: tuple[str, ...] = ()
 
     @property
     def listing(self) -> str:
-        """The paginated directory index."""
-        return f"{self.base}/people/"
+        """The paginated directory index (listing-walk colleges only)."""
+        return f"{self.base}/{self.profile_paths[0]}/"
+
+    @property
+    def sitemap_index(self) -> str:
+        return f"{self.base}/sitemap_index.xml"
 
     @property
     def profile_url_re(self) -> re.Pattern[str]:
         """Matches a profile page, excluding the listing and its /page/N/ links."""
-        return re.compile(rf"^{re.escape(self.base)}/people/[a-z0-9-]+/$")
+        paths = "|".join(map(re.escape, self.profile_paths))
+        return re.compile(rf"^{re.escape(self.base)}/(?:{paths})/[a-z0-9-]+/$")
+
+    @property
+    def sitemap_url_re(self) -> re.Pattern[str]:
+        """Matches this college's profile sitemaps within its sitemap index."""
+        stems = "|".join(map(re.escape, self.sitemaps))
+        return re.compile(rf"^{re.escape(self.base)}/(?:{stems})-sitemap\d*\.xml$")
 
 
 #: Every directory the scraper knows how to walk. ``khoury`` MUST stay first and
@@ -71,8 +95,21 @@ class College:
 COLLEGES: tuple[College, ...] = (
     College("khoury", KHOURY_BASE, parser="accordion"),
     College("cos", "https://cos.northeastern.edu"),
-    College("damore-mckim", "https://damore-mckim.northeastern.edu"),
-    College("camd", "https://camd.northeastern.edu", crawl_delay=10.0),
+    College("damore-mckim", "https://damore-mckim.northeastern.edu", sitemaps=("dmsb_person",)),
+    College("camd", "https://camd.northeastern.edu", crawl_delay=10.0, sitemaps=("camd_person",)),
+    College("coe", "https://coe.northeastern.edu", sitemaps=("faculty",)),
+    College(
+        "cssh", "https://cssh.northeastern.edu", crawl_delay=10.0,
+        profile_paths=("faculty", "person"), sitemaps=("faculty", "person"),
+    ),
+    College(
+        "bouve", "https://bouve.northeastern.edu", crawl_delay=10.0,
+        profile_paths=("directory",), sitemaps=("bouve_person",),
+    ),
+    College(
+        "law", "https://law.northeastern.edu", crawl_delay=10.0,
+        profile_paths=("faculty",), sitemaps=("faculty",),
+    ),
 )
 
 COLLEGES_BY_KEY: dict[str, College] = {c.key: c for c in COLLEGES}

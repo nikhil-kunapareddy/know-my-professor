@@ -58,6 +58,17 @@ schedule = [
     "requests==2.32.3",
     "google-cloud-storage==2.18.2",
 ]
+# OpenAlex, NSF and NIH all return JSON; Claude matches and summarises.
+publications = [
+    "requests==2.32.3",
+    "google-cloud-storage==2.18.2",
+    "know-my-professor[extract-anthropic]",
+]
+grants = [
+    "requests==2.32.3",
+    "google-cloud-storage==2.18.2",
+    "know-my-professor[extract-anthropic]",
+]
 ingest = [
     "google-cloud-storage==2.18.2",
     "pinecone==5.4.2",
@@ -109,7 +120,7 @@ eval = [
 # GitHub Actions installs the FULL set instead, so cross-extra conflicts still
 # get caught on PRs.
 ci = [
-    "know-my-professor[api,profiles,weblinks,courses,schedule,ingest,dev]",
+    "know-my-professor[api,profiles,weblinks,courses,schedule,publications,grants,ingest,dev]",
     "httpx",  # required by fastapi's TestClient
 ]
 
