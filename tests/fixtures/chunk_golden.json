@@ -43,6 +43,61 @@
       "slug": "xyz9999"
     }
   ],
+  "grants": [
+    {
+      "chunks": [
+        {
+          "metadata": {
+            "agencies": [
+              "NIH",
+              "NSF"
+            ],
+            "college": "khoury",
+            "content_hash": "sha256:3c79356fe9d898149e8c13981c8f010f",
+            "professor_name": "Jane Doe",
+            "professor_slug": "jane-doe",
+            "professor_title": "Associate Professor",
+            "section_type": "research_funding",
+            "text": "Jane Doe (Associate Professor)\nResearch funding (NSF and NIH awards):\n- NSF award 2552085 (Software & Hardware Foundations), PI, 2026-07 to 2029-09, active, $845,345 total: \"Gradual Typing at Scale\". Builds type systems that let untyped programs gain types one module at a time.\n- NIH award R01ES033792 (NIEHS), Co-PI, 2021-04 to 2025-03, ended, $412,000 in FY2024: \"Verified Pipelines for Exposure Data\"\n- NSF award 2400001, ? to ?, active: \"Workshop Travel\". Supports student travel.",
+            "url": "https://www.nsf.gov/awardsearch/showAward?AWD_ID=2552085"
+          },
+          "text": "Jane Doe (Associate Professor)\nResearch funding (NSF and NIH awards):\n- NSF award 2552085 (Software & Hardware Foundations), PI, 2026-07 to 2029-09, active, $845,345 total: \"Gradual Typing at Scale\". Builds type systems that let untyped programs gain types one module at a time.\n- NIH award R01ES033792 (NIEHS), Co-PI, 2021-04 to 2025-03, ended, $412,000 in FY2024: \"Verified Pipelines for Exposure Data\"\n- NSF award 2400001, ? to ?, active: \"Workshop Travel\". Supports student travel.",
+          "vector_id": "jane-doe#research_funding"
+        }
+      ],
+      "slug": "jane-doe"
+    },
+    {
+      "chunks": [
+        {
+          "metadata": {
+            "agencies": [
+              "NIH"
+            ],
+            "college": "cos",
+            "content_hash": "sha256:15520fe385166cfcd028595d50b52127",
+            "professor_name": "Amélie Rousseau",
+            "professor_slug": "amelie-rousseau",
+            "professor_title": "",
+            "section_type": "research_funding",
+            "text": "Amélie Rousseau\nResearch funding (NSF and NIH awards):\n- NIH award K01AG000001 (NIA), Contact PI, 2024-09 to 2029-08, active, $150,000 in latest year: \"Network Aging\". Models how neural networks lose stability with age.",
+            "url": "https://reporter.nih.gov/project-details/22222222"
+          },
+          "text": "Amélie Rousseau\nResearch funding (NSF and NIH awards):\n- NIH award K01AG000001 (NIA), Contact PI, 2024-09 to 2029-08, active, $150,000 in latest year: \"Network Aging\". Models how neural networks lose stability with age.",
+          "vector_id": "cos-amelie-rousseau#research_funding"
+        }
+      ],
+      "slug": "amelie-rousseau"
+    },
+    {
+      "chunks": [],
+      "slug": "ravi-krishnan"
+    },
+    {
+      "chunks": [],
+      "slug": null
+    }
+  ],
   "profiles": [
     {
       "chunks": [
@@ -321,6 +376,68 @@
     {
       "chunks": [],
       "is_substantive": true,
+      "slug": null
+    }
+  ],
+  "publications": [
+    {
+      "chunks": [
+        {
+          "metadata": {
+            "college": "khoury",
+            "content_hash": "sha256:f06c97b7b5da6dc6e627a80c9445166a",
+            "professor_name": "Jane Doe",
+            "professor_slug": "jane-doe",
+            "professor_title": "Associate Professor",
+            "section_type": "publication_themes",
+            "text": "Jane Doe (Associate Professor)\nResearch themes in recent publications:\nRecent work centres on gradual typing, from sound migration of untyped code to the runtime cost of contracts.",
+            "url": "https://openalex.org/A5000000001"
+          },
+          "text": "Jane Doe (Associate Professor)\nResearch themes in recent publications:\nRecent work centres on gradual typing, from sound migration of untyped code to the runtime cost of contracts.",
+          "vector_id": "jane-doe#publication_themes"
+        },
+        {
+          "metadata": {
+            "college": "khoury",
+            "content_hash": "sha256:6cdb97c075724fd4ed22c60bef61ff9a",
+            "professor_name": "Jane Doe",
+            "professor_slug": "jane-doe",
+            "professor_title": "Associate Professor",
+            "section_type": "publications",
+            "text": "Jane Doe (Associate Professor)\nRecent publications (OpenAlex):\n- Sound Gradual Migration (2025, POPL)\n- Contracts, Cheaply (2024)\n- Untitled-year draft (arXiv)",
+            "url": "https://openalex.org/A5000000001"
+          },
+          "text": "Jane Doe (Associate Professor)\nRecent publications (OpenAlex):\n- Sound Gradual Migration (2025, POPL)\n- Contracts, Cheaply (2024)\n- Untitled-year draft (arXiv)",
+          "vector_id": "jane-doe#publications"
+        }
+      ],
+      "slug": "jane-doe"
+    },
+    {
+      "chunks": [
+        {
+          "metadata": {
+            "college": "cos",
+            "content_hash": "sha256:70ef8fa6ce757e4534e36cc9a18c6065",
+            "professor_name": "Amélie Rousseau",
+            "professor_slug": "amelie-rousseau",
+            "professor_title": "",
+            "section_type": "publications",
+            "text": "Amélie Rousseau\nRecent publications (OpenAlex):\n- Métastabilité des réseaux (2026, Phys. Rev. E)",
+            "url": "https://openalex.org/A5000000003"
+          },
+          "text": "Amélie Rousseau\nRecent publications (OpenAlex):\n- Métastabilité des réseaux (2026, Phys. Rev. E)",
+          "vector_id": "cos-amelie-rousseau#publications"
+        }
+      ],
+      "slug": "amelie-rousseau"
+    },
+    {
+      "chunks": [],
+      "slug": "ravi-krishnan"
+    },
+    {
+      "chunks": [],
       "slug": null
     }
   ],
