@@ -1,8 +1,8 @@
 """The grants source: NSF and NIH awards -> one funding chunk per professor.
 
 Enriches a professor the profiles source defined, so it mints entity ids
-through ``..entities.entity_key`` and lives in the people namespace, like
-weblinks and publications.
+through ``..entities.entity_key``. Like publications, its vectors live in the
+research namespace and join to people through ``entity_namespace``.
 
 Each award line carries its agency, dates, status and amount in the TEXT, not
 only in metadata: "who has active NSF funding for X" turns on exactly those
@@ -13,7 +13,7 @@ of the record (tests/test_chunk_golden.py pins it).
 
 from __future__ import annotations
 
-from shared.config import PEOPLE_NAMESPACE
+from shared.config import PEOPLE_NAMESPACE, RESEARCH_NAMESPACE
 
 from ..base import Chunk, SectionSpec, Source, content_hash, header_line, render_section
 from ..entities import college_of, entity_key
@@ -48,7 +48,8 @@ class GrantsSource(Source):
     prefix = "grants/"
     sections = GRANTS_SECTIONS
     depends_on_entities = True
-    namespace = PEOPLE_NAMESPACE
+    namespace = RESEARCH_NAMESPACE
+    entity_namespace = PEOPLE_NAMESPACE
 
     def entity_id(self, record: dict) -> str | None:
         """The profile entity these awards belong to -- same scheme as profiles."""

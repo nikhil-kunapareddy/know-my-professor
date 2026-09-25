@@ -15,7 +15,7 @@ from preprocessing.sources.courses.source import COURSES_NAMESPACE, CourseSource
 from preprocessing.sources.schedule.banner import BannerClient
 from preprocessing.sources.schedule.runner import course_slug
 from preprocessing.sources.schedule.source import ScheduleSource
-from shared.config import PEOPLE_NAMESPACE
+from shared.config import PEOPLE_NAMESPACE, RESEARCH_NAMESPACE
 
 SUBJECT_HTML = """
 <html><body>
@@ -174,6 +174,69 @@ def test_collect_chunks_groups_by_namespace():
     assert set(grouped) == {PEOPLE_NAMESPACE, COURSES_NAMESPACE}
     assert [c.vector_id for c in grouped[PEOPLE_NAMESPACE]] == ["a#biography"]
     assert [c.vector_id for c in grouped[COURSES_NAMESPACE]] == ["course-cs3800#course_description"]
+
+
+def test_research_sources_write_apart_but_enrich_people():
+    """Publications and grants get their own slots, yet still join to profiles."""
+    from preprocessing.sources.grants.source import GrantsSource
+    from preprocessing.sources.publications.source import PublicationsSource
+
+    for source in (PublicationsSource(), GrantsSource()):
+        assert source.namespace == RESEARCH_NAMESPACE
+        assert source.entity_scope() == PEOPLE_NAMESPACE
+
+
+def test_registry_accepts_a_dependent_source_whose_entities_live_elsewhere():
+    from preprocessing.sources.base import Source
+    from preprocessing.sources.registry import _validate
+
+    class Enrichment(Source):
+        name, prefix, sections = "enrichment", "enrichment/", ()
+        depends_on_entities = True
+        namespace = "apart"
+        entity_namespace = "home"
+
+        def to_chunks(self, record):  # pragma: no cover - never called
+            return []
+
+    class Anchor(Source):
+        name, prefix, sections = "anchor", "anchor/", ()
+        depends_on_entities = False
+        namespace = "home"
+
+        def to_chunks(self, record):  # pragma: no cover - never called
+            return []
+
+    _validate((Anchor(), Enrichment()))
+
+
+def test_collect_chunks_joins_research_to_people_ids_only():
+    """A research record lands in research, and only if its entity is a person.
+
+    The join is per namespace: an id that exists only among the courses must not
+    admit it, because ids are unique only within one namespace.
+    """
+    from preprocessing.ingest.runner import _collect_chunks
+
+    award = {"agency": "NSF", "award_id": "1", "title": "Compilers", "status": "active"}
+
+    class _Store:
+        def iter_json(self, prefix):
+            data = {
+                "profiles/": [{"slug": "a", "name": "A", "biography": "Studies compilers."}],
+                "courses/": [{"slug": "cs3800", "code": "CS 3800", "title": "Theory",
+                              "description": "Covers automata theory and complexity."}],
+                "grants/": [
+                    {"slug": "a", "professor_name": "A", "awards": [award]},
+                    # Only a course has this id; it is no professor.
+                    {"slug": "course-cs3800", "professor_name": "X", "awards": [award]},
+                ],
+            }
+            return iter(data.get(prefix, []))
+
+    grouped = _collect_chunks(_Store(), limit=None)
+    assert [c.vector_id for c in grouped[RESEARCH_NAMESPACE]] == ["a#research_funding"]
+    assert [c.vector_id for c in grouped[PEOPLE_NAMESPACE]] == ["a#biography"]
 
 
 def test_pipeline_passes_the_namespace_to_the_retriever():
