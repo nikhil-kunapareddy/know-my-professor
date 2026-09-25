@@ -55,6 +55,13 @@ PEOPLE_NAMESPACE = "people"
 # The course corpus. Lives here for the same reason: serving now names it too.
 COURSES_NAMESPACE = "courses"
 
+# Publications and grants: Claude-written enrichment about people in
+# PEOPLE_NAMESPACE, kept out of it for two reasons. A publication-themes chunk
+# is *about a topic*, like a course description, so it would outscore bios for
+# the people namespace's slots. And it is regenerated on its own schedule, so
+# it can be wiped and rebuilt without touching the profiles.
+RESEARCH_NAMESPACE = "research"
+
 # Namespaces /chat searches, in order. EVERY listed namespace gets its own
 # top_k -- they are not merged into one top_k -- because a cosine score cannot
 # tell a person from a course. Measured 2026-09-21 on the golden set: course
@@ -62,7 +69,7 @@ COURSES_NAMESPACE = "courses"
 # a syllabus (0.769) above the right professor's bio (0.729). Merging into one
 # top_k displaced the first correct chunk on 3 of 10 people questions. Giving
 # each namespace its own slots makes that arithmetically impossible.
-CHAT_NAMESPACES: tuple[str, ...] = (PEOPLE_NAMESPACE, COURSES_NAMESPACE)
+CHAT_NAMESPACES: tuple[str, ...] = (PEOPLE_NAMESPACE, COURSES_NAMESPACE, RESEARCH_NAMESPACE)
 
 # --- Generation / retrieval (core) -----------------------------------------
 
@@ -75,7 +82,7 @@ DEFAULT_CHAT_PROVIDER = "anthropic"
 
 # Chunks retrieved PER NAMESPACE, not per request: /chat runs one query against
 # each namespace in CHAT_NAMESPACES, so the model actually sees
-# DEFAULT_TOP_K * len(CHAT_NAMESPACES) chunks -- 22 today, not 11. Raised 8 -> 11
+# DEFAULT_TOP_K * len(CHAT_NAMESPACES) chunks -- 33 today, not 11. Raised 8 -> 11
 # to widen recall on broad questions ("who works on NLP?"), where the corpus
 # holds far more valid people than 8 slots can carry. Override per deployment
 # with TOP_K.

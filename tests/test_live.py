@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from core.retrieval.base import RetrievalResult
 from evaluation.live import LiveSystem
-from shared.config import COURSES_NAMESPACE, PEOPLE_NAMESPACE
+from shared.config import COURSES_NAMESPACE, PEOPLE_NAMESPACE, RESEARCH_NAMESPACE
 from shared.settings import ApiSettings
 
 
@@ -72,7 +72,7 @@ def test_live_pipeline_searches_the_same_namespaces_as_serving():
     pipeline = system.pipeline(top_k=11, min_score=0.35)
 
     assert pipeline.namespaces == system.settings.namespaces
-    assert pipeline.namespaces == (PEOPLE_NAMESPACE, COURSES_NAMESPACE)
+    assert pipeline.namespaces == (PEOPLE_NAMESPACE, COURSES_NAMESPACE, RESEARCH_NAMESPACE)
     assert None not in pipeline.namespaces
 
 

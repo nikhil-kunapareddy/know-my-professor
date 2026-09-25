@@ -50,11 +50,12 @@ def _validate(sources: tuple[Source, ...]) -> None:
 
     # A dependent source is scoped to the entity ids an entity-defining source
     # produced, and ids are unique only within a namespace. A dependent source
-    # alone in its namespace can therefore never match anything -- it would
+    # whose entity scope (``entity_namespace``, else its own namespace) holds no
+    # entity-defining source can therefore never match anything -- it would
     # ingest zero chunks silently, which is the worst way to find out.
     entity_namespaces = {s.namespace for s in sources if not s.depends_on_entities}
     orphaned = sorted(
-        {s.name for s in sources if s.depends_on_entities and s.namespace not in entity_namespaces}
+        {s.name for s in sources if s.depends_on_entities and s.entity_scope() not in entity_namespaces}
     )
     if orphaned:
         raise ValueError(

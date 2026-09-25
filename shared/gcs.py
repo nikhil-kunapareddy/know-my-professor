@@ -95,10 +95,16 @@ class GCSStore(OutputStore):
 
     def __init__(self, bucket_name: str, prefix: str = "") -> None:
         from google.cloud import storage
+        from google.cloud.storage.retry import DEFAULT_RETRY
 
         self.client = storage.Client()
         self.bucket = self.client.bucket(bucket_name)
         self.prefix = prefix.rstrip("/")
+        # The client retries an upload only when it carries a generation
+        # precondition. Ours overwrite a whole object, so retrying is safe --
+        # and without it one transient SSL EOF ended fetch-grants (2026-09-25)
+        # after it had paid for every summary it was about to save.
+        self._upload_retry = DEFAULT_RETRY
 
     def _full_key(self, key: str) -> str:
         return f"{self.prefix}/{key}" if self.prefix else key
@@ -107,7 +113,7 @@ class GCSStore(OutputStore):
 
     def write_text(self, key: str, content: str) -> None:
         blob = self.bucket.blob(self._full_key(key))
-        blob.upload_from_string(content, content_type="application/json")
+        blob.upload_from_string(content, content_type="application/json", retry=self._upload_retry)
 
     def read_text(self, key: str) -> str | None:
         blob = self.bucket.blob(self._full_key(key))
@@ -141,5 +147,6 @@ class GCSStore(OutputStore):
         blob.upload_from_string(
             json.dumps(obj, ensure_ascii=False, indent=2),
             content_type="application/json",
+            retry=self._upload_retry,
         )
 
