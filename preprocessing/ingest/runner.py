@@ -73,7 +73,9 @@ def _collect_chunks(store: GCSStore, limit: int | None) -> dict[str | None, list
     professor namespace and re-embed everything every run.
     """
     grouped: dict[str | None, list[Chunk]] = {}
-    entity_ids: set[str] = set()
+    # Per namespace, because ids are unique only within one: a dependent source
+    # matches against its ``entity_scope()``, not every id in the index.
+    entity_ids: dict[str | None, set[str]] = {}
 
     for source in entity_sources():
         loaded = ingestable = produced = 0
@@ -83,7 +85,7 @@ def _collect_chunks(store: GCSStore, limit: int | None) -> dict[str | None, list
             if entity_id:
                 # Registered even when not ingestable, so enrichment for a
                 # thin profile is still scoped to a professor we know about.
-                entity_ids.add(entity_id)
+                entity_ids.setdefault(source.namespace, set()).add(entity_id)
             if not source.is_ingestable(record):
                 continue
             ingestable += 1
@@ -95,8 +97,9 @@ def _collect_chunks(store: GCSStore, limit: int | None) -> dict[str | None, list
 
     for source in dependent_sources():
         matched = produced = 0
+        known = entity_ids.get(source.entity_scope(), set())
         for record in store.iter_json(source.prefix):
-            if source.entity_id(record) not in entity_ids:
+            if source.entity_id(record) not in known:
                 continue
             if not source.is_ingestable(record):
                 continue

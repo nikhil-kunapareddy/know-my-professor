@@ -1,8 +1,10 @@
 """The publications source: OpenAlex works -> chunks on the professor.
 
 Enriches a professor the profiles source defined, exactly as weblinks do, so it
-mints entity ids through the same ``..entities.entity_key`` and lives in the
-people namespace. Two sections per professor:
+mints entity ids through the same ``..entities.entity_key``. Its vectors live in
+the research namespace rather than beside the profiles (see RESEARCH_NAMESPACE in
+shared/config.py); ``entity_namespace`` still joins them to people. Two sections
+per professor:
 
 - ``publication_themes`` -- Claude's short account of what the recent work is
   about. Written from titles and abstracts only; it exists because a list of
@@ -17,7 +19,7 @@ off the professor's own website; the registry rejects a collision at import.
 
 from __future__ import annotations
 
-from shared.config import PEOPLE_NAMESPACE
+from shared.config import PEOPLE_NAMESPACE, RESEARCH_NAMESPACE
 
 from ..base import Chunk, SectionSpec, Source, content_hash, header_line, render_section
 from ..entities import college_of, entity_key
@@ -42,7 +44,8 @@ class PublicationsSource(Source):
     prefix = "publications/"
     sections = PUBLICATIONS_SECTIONS
     depends_on_entities = True
-    namespace = PEOPLE_NAMESPACE
+    namespace = RESEARCH_NAMESPACE
+    entity_namespace = PEOPLE_NAMESPACE
 
     def entity_id(self, record: dict) -> str | None:
         """The profile entity these works belong to -- same scheme as profiles."""

@@ -98,6 +98,16 @@ class Source(ABC):
     #: courses the majority of the corpus, and "who works on machine learning?"
     #: would start returning syllabi instead of people.
     namespace: str | None = None
+    #: For a dependent source: the namespace holding the entities it enriches,
+    #: when that is not its own. ``None`` means its own ``namespace``.
+    #: Publications and grants write to ``research`` but enrich professors in
+    #: ``people``, so their chunks get their own slots instead of competing
+    #: with bios for the people namespace's top-k.
+    entity_namespace: str | None = None
+
+    def entity_scope(self) -> str | None:
+        """The namespace whose entity ids this source's records must match."""
+        return self.entity_namespace or self.namespace
 
     def entity_id(self, record: dict) -> str | None:
         """The entity a record belongs to. Default: the professor slug."""
