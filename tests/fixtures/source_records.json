@@ -1,7 +1,8 @@
 {
   "_comment": [
     "Synthetic source records that exercise every chunk-rendering branch:",
-    "all profile sections, all weblinks section types, list vs string bodies,",
+    "all profile sections, all weblinks section types, publications and grants,",
+    "list vs string bodies,",
     "missing title, unicode, empty/absent sections, and a no-slug record.",
     "chunk_golden.json is the output the ingest chunker produces from these.",
     "Both files exist so a refactor of the chunking/source layer can prove it is",
@@ -281,6 +282,212 @@
           "description": "Fall 2026 Semester",
           "instructors": [],
           "section_count": 4
+        }
+      ]
+    }
+  ],
+  "publications": [
+    {
+      "slug": "jane-doe",
+      "professor_name": "Jane Doe",
+      "professor_title": "Associate Professor",
+      "openalex_ids": [
+        "A5000000001"
+      ],
+      "url": "https://openalex.org/A5000000001",
+      "themes": "Recent work centres on gradual typing, from sound migration of untyped code to the runtime cost of contracts.",
+      "works": [
+        {
+          "id": "W1",
+          "title": "Sound Gradual Migration",
+          "year": 2025,
+          "venue": "POPL",
+          "doi": "https://doi.org/10.1/x",
+          "type": "article"
+        },
+        {
+          "id": "W2",
+          "title": "Contracts, Cheaply",
+          "year": 2024,
+          "venue": "",
+          "doi": "",
+          "type": "preprint"
+        },
+        {
+          "id": "W3",
+          "title": "Untitled-year draft",
+          "year": null,
+          "venue": "arXiv",
+          "doi": "",
+          "type": "preprint"
+        },
+        {
+          "id": "W4",
+          "title": "",
+          "year": 2023,
+          "venue": "ICFP",
+          "doi": "",
+          "type": "article"
+        }
+      ],
+      "excluded_work_ids": [
+        "W9"
+      ],
+      "candidates_considered": [
+        "A5000000001",
+        "A5000000002"
+      ],
+      "input_hash": "sha256:feedface",
+      "schema_version": "v1",
+      "model": "claude-haiku-4-5"
+    },
+    {
+      "slug": "amelie-rousseau",
+      "college": "cos",
+      "professor_name": "Amélie Rousseau",
+      "professor_title": "",
+      "openalex_ids": [
+        "A5000000003"
+      ],
+      "url": "https://openalex.org/A5000000003",
+      "themes": "",
+      "works": [
+        {
+          "id": "W5",
+          "title": "Métastabilité des réseaux",
+          "year": 2026,
+          "venue": "Phys. Rev. E",
+          "doi": "",
+          "type": "article"
+        }
+      ],
+      "excluded_work_ids": [],
+      "candidates_considered": [
+        "A5000000003"
+      ],
+      "input_hash": "sha256:cafe",
+      "schema_version": "v1",
+      "model": "claude-haiku-4-5"
+    },
+    {
+      "slug": "ravi-krishnan",
+      "professor_name": "Ravi Krishnan",
+      "professor_title": "Professor",
+      "openalex_ids": [],
+      "url": "",
+      "themes": "",
+      "works": [],
+      "excluded_work_ids": [],
+      "candidates_considered": [
+        "A5000000004"
+      ],
+      "input_hash": "sha256:0",
+      "schema_version": "v1",
+      "model": "claude-haiku-4-5"
+    },
+    {
+      "slug": null,
+      "professor_name": "Nobody",
+      "themes": "x",
+      "works": [
+        {
+          "id": "W6",
+          "title": "Orphan",
+          "year": 2025,
+          "venue": ""
+        }
+      ]
+    }
+  ],
+  "grants": [
+    {
+      "slug": "jane-doe",
+      "professor_name": "Jane Doe",
+      "professor_title": "Associate Professor",
+      "awards": [
+        {
+          "agency": "NSF",
+          "award_id": "2552085",
+          "title": "Gradual Typing at Scale",
+          "program": "Software & Hardware Foundations",
+          "start": "2026-07-01",
+          "end": "2029-09-30",
+          "amount": 845345,
+          "amount_basis": "total",
+          "url": "https://www.nsf.gov/awardsearch/showAward?AWD_ID=2552085",
+          "role": "PI",
+          "status": "active",
+          "summary": "Builds type systems that let untyped programs gain types one module at a time."
+        },
+        {
+          "agency": "NIH",
+          "award_id": "R01ES033792",
+          "title": "Verified Pipelines for Exposure Data",
+          "program": "NIEHS",
+          "start": "2021-04-01",
+          "end": "2025-03-31",
+          "amount": 412000,
+          "amount_basis": "FY2024",
+          "url": "https://reporter.nih.gov/project-details/11111111",
+          "role": "Co-PI",
+          "status": "ended",
+          "summary": ""
+        },
+        {
+          "agency": "NSF",
+          "award_id": "2400001",
+          "title": "Workshop Travel",
+          "program": "",
+          "start": "",
+          "end": "",
+          "amount": null,
+          "amount_basis": "total",
+          "url": "",
+          "role": "",
+          "status": "active",
+          "summary": "Supports student travel."
+        }
+      ],
+      "schema_version": "v1"
+    },
+    {
+      "slug": "amelie-rousseau",
+      "college": "cos",
+      "professor_name": "Amélie Rousseau",
+      "professor_title": "",
+      "awards": [
+        {
+          "agency": "NIH",
+          "award_id": "K01AG000001",
+          "title": "Network Aging",
+          "program": "NIA",
+          "start": "2024-09-01",
+          "end": "2029-08-31",
+          "amount": 150000,
+          "amount_basis": "latest year",
+          "url": "https://reporter.nih.gov/project-details/22222222",
+          "role": "Contact PI",
+          "status": "active",
+          "summary": "Models how neural networks lose stability with age."
+        }
+      ],
+      "schema_version": "v1"
+    },
+    {
+      "slug": "ravi-krishnan",
+      "professor_name": "Ravi Krishnan",
+      "professor_title": "Professor",
+      "awards": [],
+      "schema_version": "v1"
+    },
+    {
+      "slug": null,
+      "professor_name": "Nobody",
+      "awards": [
+        {
+          "agency": "NSF",
+          "award_id": "1",
+          "title": "Orphan"
         }
       ]
     }

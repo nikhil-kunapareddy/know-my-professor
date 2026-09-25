@@ -84,6 +84,16 @@ and skip instead. 52 of the 68 tests in `test_deepeval_eval.py` run without it.
 - `test_weblinks.py` — `SiteCrawler` one-hop selection + fetch encoding,
   `Extractor` guard/`page_hash`/`clean_pages`, and that the Gemini extraction
   schema matches the source's declared section keys.
+- `test_names.py` — the strict name key both enrichment joins share (accents,
+  honorifics, "Last, First", initials refused) and `ProfileIndex` returning
+  every profile of a joint appointment.
+- `test_publications.py` — OpenAlex parsing, the author index, record building
+  (unoffered author ids dropped, works excluded from a merged author record,
+  themes only with works), the prompt, the skip hash, budget exhaustion without
+  retries, cursor paging, and the job's write/skip/stop paths.
+- `test_grants.py` — NSF and NIH parsing and pagination, newest fiscal year per
+  NIH project, matching an award once per professor (and to every profile of a
+  joint appointment), status fixed at write time, and the summary cache.
 - `test_eval.py` — evaluation scoring (recall@k, MRR, citation precision),
   golden-file parsing and its invariants (every case names slugs or expects a
   refusal; every registered section type has a case), no-answer scoring

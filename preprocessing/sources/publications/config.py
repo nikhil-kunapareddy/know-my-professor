@@ -57,9 +57,10 @@ SCHEMA_VERSION = "v1"
 MATCH_SCHEMA: dict = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["matching_author_ids", "themes"],
+    "required": ["matching_author_ids", "excluded_work_ids", "themes"],
     "properties": {
         "matching_author_ids": {"type": "array", "items": {"type": "string"}},
+        "excluded_work_ids": {"type": "array", "items": {"type": "string"}},
         "themes": {"type": "string"},
     },
 }
@@ -74,8 +75,12 @@ MATCH_PROMPT = (
     "1. matching_author_ids: the ids of EVERY candidate that is this person. Select "
     "a candidate only if its topics and works fit this person's field and role. "
     "If none fit, return an empty list.\n"
-    "2. themes: 2-4 sentences on the research themes the selected records' works "
-    "show, most recent emphasis first. Use only the titles and abstracts shown; do "
-    "not add facts, and do not mention OpenAlex or the matching. Empty if nothing "
-    "was selected.\n\n"
+    "2. excluded_work_ids: OpenAlex sometimes merges several people into one "
+    "record, so a selected record can carry works by someone else. List the id of "
+    "every work in the selected records that plainly belongs to a different field "
+    "than this person's. Leave it empty when they all fit.\n"
+    "3. themes: 2-4 sentences on the research themes the selected, non-excluded "
+    "works show, most recent emphasis first. Use only the titles and abstracts "
+    "shown; do not add facts, and do not mention OpenAlex or the matching. Empty "
+    "if nothing was selected.\n\n"
 )

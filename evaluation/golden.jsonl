@@ -111,3 +111,16 @@
 {"id": "course-theory-of-computation", "question": "What does CS 3800 cover?", "expected_slugs": ["course-cs3800"], "expected_sections": ["course_description"], "namespace": "courses", "reference": "CS 3800, Theory of Computation, introduces automata theory, computability, and complexity — the capabilities and limitations of computers.", "notes": "Course lookup by code; the most literal shape of a catalog question."}
 {"id": "course-who-teaches-compilers", "question": "Who teaches Compilers?", "expected_slugs": ["course-cs4410"], "expected_sections": ["course_instructors"], "namespace": "courses", "notes": "The question that motivated the courses corpus. No reference: the instructor set changes every term, so a fixed prose answer would score correct answers as wrong."}
 {"id": "course-discrete-structures-prereq", "question": "What are the prerequisites for Discrete Structures?", "expected_slugs": ["course-cs1800"], "expected_sections": ["course_description"], "namespace": "courses", "notes": "Requisites are folded into the description chunk rather than given their own section, so this must retrieve course_description."}
+
+# --- Publications and grants (added 2026-09-25) ------------------------------
+# Built the same way as the rest: from RAW source data, not retriever output.
+# research_funding cases come from the NSF Award Search and NIH RePORTER
+# responses; publications cases from the professor's OpenAlex author record,
+# where that record was the ONLY same-name candidate and its topics fit the
+# profile. Those two cases therefore also assume the matching step accepts that
+# record -- a miss on them is worth reading before blaming retrieval.
+# All four miss until fetch-grants / fetch-publications have run AND ingest.
+{"id": "grants-nicotinic-receptors", "question": "Who has NIH funding for research on nicotinic acetylcholine receptors?", "expected_slugs": ["bouve-ganesh-thakur"], "expected_sections": ["research_funding"], "notes": "Two active NIH R01s (R01NS140966, R01DA059985). Ralph Loring's profile also mentions nicotinic receptors but he holds no award in the window, so naming him as funded is wrong."}
+{"id": "grants-career-resonator-arrays", "question": "Who holds an NSF CAREER award on coupled resonator arrays?", "expected_slugs": ["coe-mittal-sunil"], "expected_sections": ["research_funding"], "notes": "NSF 2542534. The profile mentions ring resonators; only the funding chunk says CAREER award."}
+{"id": "pubs-colon-crypt-gels", "question": "Who has recently published a technique for making colon crypt gels for 3D models?", "expected_slugs": ["coe-carrier-rebecca", "cos-rebecca-carrier"], "expected_sections": ["publications"], "notes": "A 2025 paper title; neither profile mentions crypts. One person, two college profiles, one OpenAlex record."}
+{"id": "pubs-human-ai-teams", "question": "Whose recent publications focus on human-AI teams and agent-mediated collaboration?", "expected_slugs": ["christoph-riedl", "damore-mckim-christoph-riedl"], "expected_sections": ["publication_themes", "publications"], "notes": "2026 works on cognitive spillover in human-AI teams and accountability in agent-mediated collaboration. Probes the themes section, which exists because titles alone embed poorly."}

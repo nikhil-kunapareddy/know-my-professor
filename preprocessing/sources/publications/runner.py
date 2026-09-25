@@ -105,7 +105,7 @@ def build_prompt(profile: dict, candidates: list[tuple[dict, list[dict]]]) -> st
             lines.append(f"- (no works in the last {LOOKBACK_YEARS} years)")
         for work in works:
             venue = f" ({work['venue']})" if work["venue"] else ""
-            lines.append(f"- {work['year']}: {work['title']}{venue}")
+            lines.append(f"- [{work['id']}] {work['year']}: {work['title']}{venue}")
             if work["abstract"]:
                 lines.append(f"  {work['abstract']}")
     return "\n".join(lines)
@@ -145,7 +145,9 @@ def build_record(
     offered = {c["id"] for c in candidates}
     picked = set(decision.get("matching_author_ids") or []) & offered
     chosen = [c["id"] for c in candidates if c["id"] in picked]  # candidate order, not the model's
-    works = merge_works([works_by_author.get(i, []) for i in chosen])
+    kept_lists = [works_by_author.get(i, []) for i in chosen]
+    excluded = set(decision.get("excluded_work_ids") or []) & {w["id"] for ws in kept_lists for w in ws}
+    works = merge_works([[w for w in ws if w["id"] not in excluded] for ws in kept_lists])
     return {
         "slug": profile.get("slug"),
         "college": college_of(profile),
@@ -156,6 +158,7 @@ def build_record(
         # Themes describe the accepted works; with none there is nothing to describe.
         "themes": (decision.get("themes") or "").strip() if works else "",
         "works": [{k: w[k] for k in ("id", "title", "year", "venue", "doi", "type")} for w in works],
+        "excluded_work_ids": sorted(excluded),
         "candidates_considered": sorted(offered),
         "input_hash": ihash,
         "schema_version": SCHEMA_VERSION,

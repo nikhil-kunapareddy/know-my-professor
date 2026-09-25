@@ -16,7 +16,9 @@ from collections import Counter
 
 from .base import Chunk, Source
 from .courses.source import CourseSource
+from .grants.source import GrantsSource
 from .profiles.source import ProfileSource
+from .publications.source import PublicationsSource
 from .schedule.source import ScheduleSource
 from .weblinks.source import WeblinksSource
 
@@ -25,6 +27,8 @@ from .weblinks.source import WeblinksSource
 SOURCES: tuple[Source, ...] = (
     ProfileSource(),
     WeblinksSource(),
+    PublicationsSource(),
+    GrantsSource(),
     CourseSource(),
     ScheduleSource(),
 )
