@@ -17,7 +17,11 @@ from __future__ import annotations
 
 import hashlib
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from dataclasses import dataclass, field
+
+from ..documents.chunking import chunk_blocks
+from ..documents.ir import Block, BlockKind, Document
 
 
 @dataclass
@@ -72,6 +76,79 @@ def render_section(header: str, label: str, value) -> str:
 def fallback_label(section_type: str) -> str:
     """Heading for a section type no source declared (forward compatibility)."""
     return section_type.replace("_", " ").title()
+
+
+# --- structure-aware sections (preprocessing/documents) ----------------------
+
+#: Joins a section's vector id to its part number: ``{entity}#{section}@2``.
+#: Section keys may not contain it; the registry checks at import.
+PART_SEPARATOR = "@"
+
+
+def part_vector_id(base_id: str, part: int) -> str:
+    """The vector id of part ``part`` (1-based) of the section ``base_id``.
+
+    Part 1 keeps the section's own id. So a section that fits in one chunk --
+    every section in the index today -- keeps the id it already has, and moving
+    a source onto ``section_chunks`` orphans nothing that did not grow.
+    """
+    return base_id if part == 1 else f"{base_id}{PART_SEPARATOR}{part}"
+
+
+def _as_blocks(content) -> list[Block]:
+    """Section content as blocks: a string is a paragraph, a list is a list."""
+    if isinstance(content, Document):
+        return list(content.blocks)
+    if isinstance(content, str):
+        return [Block(BlockKind.PARAGRAPH, text=content)] if content else []
+    if isinstance(content, Sequence) and all(isinstance(b, Block) for b in content):
+        return list(content)
+    if isinstance(content, Sequence):
+        return [Block(BlockKind.LIST, items=tuple(f"{item}" for item in content))] if content else []
+    return [Block(BlockKind.PARAGRAPH, text=str(content))]
+
+
+def section_chunks(
+    base_id: str,
+    header: str,
+    label: str,
+    content: str | Sequence | Document,
+    metadata: dict,
+    *,
+    max_chars: int | None = None,
+) -> list[Chunk]:
+    """One section as chunks, cut along its structure when it outgrows ``max_chars``.
+
+    ``content`` may be a string, a list, or blocks / a ``Document`` from
+    ``preprocessing.documents``. With ``max_chars=None`` -- or whenever the
+    section fits -- this returns exactly the one chunk ``render_section`` would:
+    same id, same text, same ``content_hash``. When it does not fit:
+
+    - parts after the first get ids ``{base_id}@2``, ``@3``, ... and a ``part``
+      metadata field;
+    - a later part's label reads ``{label} (continued)``;
+    - a part under document headings has them in its label
+      (``Label > Heading > Subheading``) and in ``heading_path`` metadata;
+    - a part from paginated input carries ``page_start``/``page_end``. Two
+      numbers, because Pinecone metadata lists may only hold strings.
+
+    A section that shrinks leaves its old tail parts behind in Pinecone; ingest's
+    ``--prune`` is what removes them.
+    """
+    pieces = chunk_blocks(_as_blocks(content), max_chars)
+    chunks = []
+    for part, piece in enumerate(pieces, 1):
+        heading = " > ".join((label, *piece.path)) + (" (continued)" if piece.continued else "")
+        text = render_section(header, heading, piece.body)
+        meta = {**metadata, "content_hash": content_hash(text)}
+        if len(pieces) > 1:
+            meta["part"] = part
+        if piece.path:
+            meta["heading_path"] = " > ".join(piece.path)
+        if piece.pages:
+            meta["page_start"], meta["page_end"] = piece.pages[0], piece.pages[-1]
+        chunks.append(Chunk(vector_id=part_vector_id(base_id, part), text=text, metadata=meta))
+    return chunks
 
 
 class Source(ABC):

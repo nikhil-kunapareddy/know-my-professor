@@ -41,6 +41,8 @@ PINECONE_DEFAULT_CLOUD = "aws"
 PINECONE_DEFAULT_REGION = "us-east-1"
 UPSERT_BATCH_SIZE = 100
 FETCH_BATCH_SIZE = 100
+#: Pinecone's cap on ids per delete call.
+DELETE_BATCH_SIZE = 1000
 
 # The namespace holding the people corpus (profiles + weblinks). It lives here,
 # not on the Source, because BOTH ends must name the same partition: ingest
