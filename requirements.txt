@@ -4,7 +4,7 @@
 # Dependencies are declared in pyproject.toml under [project.optional-dependencies],
 # one extra per Cloud Run deployable. Deployment installs only the relevant extra
 # (see deploy/Dockerfile: pip install ".[${COMPONENT}]").
--e .[profiles,weblinks,ingest,api,frontend,dev]
+-e .[profiles,weblinks,ingest,api,frontend,documents,dev]
 
 # The `eval` extra (deepeval) is deliberately NOT here: it pulls opentelemetry,
 # posthog and a pytest plugin for one opt-in tool, and GitHub Actions installs

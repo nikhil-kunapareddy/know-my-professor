@@ -6,7 +6,7 @@ import time
 
 from pinecone import Pinecone, ServerlessSpec
 
-from shared.config import FETCH_BATCH_SIZE, UPSERT_BATCH_SIZE
+from shared.config import DELETE_BATCH_SIZE, FETCH_BATCH_SIZE, UPSERT_BATCH_SIZE
 
 from ..sources.base import Chunk
 
@@ -109,3 +109,22 @@ class PineconeStore:
         ]
         for i in range(0, len(payload), UPSERT_BATCH_SIZE):
             self.index.upsert(vectors=payload[i : i + UPSERT_BATCH_SIZE], **_ns(namespace))
+
+    def list_ids(self, namespace: str | None = None) -> set[str]:
+        """Every vector id in ``namespace``. Serverless indexes only, which this is."""
+        ids: set[str] = set()
+        for page in self.index.list(**_ns(namespace)):
+            ids.update(page)
+        return ids
+
+    def delete_ids(self, ids: list[str], namespace: str | None = None) -> None:
+        """Delete ``ids`` from ``namespace`` in batches of DELETE_BATCH_SIZE.
+
+        Refuses an unnamed namespace outright. Deleting by id in the default
+        partition is how a typo'd namespace would destroy the wrong vectors, and
+        no registered source writes there.
+        """
+        if not namespace:
+            raise ValueError("refusing to delete from the default (unnamed) namespace")
+        for i in range(0, len(ids), DELETE_BATCH_SIZE):
+            self.index.delete(ids=ids[i : i + DELETE_BATCH_SIZE], namespace=namespace)
