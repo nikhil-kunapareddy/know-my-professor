@@ -53,6 +53,13 @@ courses = [
     "beautifulsoup4==4.12.3",
     "google-cloud-storage==2.18.2",
 ]
+# Degree requirements from the same catalog. Parsed by DOM rules (courseleaf.py)
+# into preprocessing/documents' IR, which is standard library -- no trafilatura.
+programs = [
+    "requests==2.32.3",
+    "beautifulsoup4==4.12.3",
+    "google-cloud-storage==2.18.2",
+]
 # Banner returns JSON, so no HTML parser is needed here.
 schedule = [
     "requests==2.32.3",
@@ -68,6 +75,22 @@ grants = [
     "requests==2.32.3",
     "google-cloud-storage==2.18.2",
     "know-my-professor[extract-anthropic]",
+]
+# Tiered document parsing (preprocessing/documents): HTML, PDF and images into
+# typed blocks. Not a deployable yet -- the first scraper that fetches PDFs or
+# images composes it into its own extra. Ingest does NOT need it: the IR and the
+# chunker are standard library, and only the tiers import these.
+#   pdfplumber   tier 0 for PDF (MIT; renders pages through pypdfium2)
+#   pytesseract  tier 1, a wrapper -- the tesseract BINARY must be installed
+#                separately (apt-get install -y tesseract-ocr)
+#   gemini       tier 2 figure captions, free tier, same SDK as weblinks
+documents = [
+    "beautifulsoup4==4.12.3",
+    "trafilatura==2.1.0",
+    "pdfplumber==0.11.10",
+    "pytesseract==0.3.13",
+    "pillow==12.2.0",
+    "know-my-professor[extract-gemini]",
 ]
 ingest = [
     "google-cloud-storage==2.18.2",
@@ -95,7 +118,8 @@ frontend = [
     # shared/schemas.py is the wire contract both ends parse against.
     "pydantic==2.10.3",
 ]
-dev = ["pytest", "ruff"]
+# fpdf2 builds the PDF fixtures in tests/test_documents.py; no image ships it.
+dev = ["pytest", "ruff", "fpdf2==2.8.8"]
 
 # DeepEval evaluation (evaluation/deepeval_eval). Local/manual only: it is in
 # no image and NOT in requirements.txt, because it pulls opentelemetry, posthog
@@ -120,7 +144,7 @@ eval = [
 # GitHub Actions installs the FULL set instead, so cross-extra conflicts still
 # get caught on PRs.
 ci = [
-    "know-my-professor[api,profiles,weblinks,courses,schedule,publications,grants,ingest,dev]",
+    "know-my-professor[api,profiles,weblinks,courses,schedule,publications,grants,programs,ingest,documents,dev]",
     "httpx",  # required by fastapi's TestClient
 ]
 

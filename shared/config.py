@@ -34,12 +34,20 @@ EMBED_MAX_RETRIES = 6
 # --- Pinecone --------------------------------------------------------------
 
 # 1024-dim index for Mistral vectors. The old 3072-dim "know-my-professor"
-# index (Gemini embeddings) is kept intact for rollback only.
+# index (Gemini embeddings) was deleted 2026-09-25: no embedder of that width
+# was left to query it, and its 1,463 vectors were the June Khoury-only corpus.
 PINECONE_DEFAULT_INDEX = "know-my-professor-m1024"
 PINECONE_DEFAULT_CLOUD = "aws"
 PINECONE_DEFAULT_REGION = "us-east-1"
 UPSERT_BATCH_SIZE = 100
 FETCH_BATCH_SIZE = 100
+#: Pinecone's cap on ids per delete call.
+DELETE_BATCH_SIZE = 1000
+
+#: Joins a section's vector id to its part number when structure-aware chunking
+#: splits it: ``{entity}#{section}@2``. Here, not in preprocessing, because both
+#: ends read ids -- ingest mints and prunes them, the eval harness scores them.
+PART_SEPARATOR = "@"
 
 # The namespace holding the people corpus (profiles + weblinks). It lives here,
 # not on the Source, because BOTH ends must name the same partition: ingest

@@ -133,6 +133,7 @@ class LlmProfileParser:
             labs_and_groups=fields.get("labs_and_groups") or [],
             projects=fields.get("projects") or [],
             raw_aside={},
+            parser_tier="llm",
         )
 
     def _extract(self, clean_text: str) -> dict:

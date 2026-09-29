@@ -7,7 +7,8 @@
     "chunk_golden.json is the output the ingest chunker produces from these.",
     "Both files exist so a refactor of the chunking/source layer can prove it is",
     "byte-identical -- identical text means identical content_hash, which means",
-    "no re-embedding and no re-ingest."
+    "no re-embedding and no re-ingest.",
+    "programs: a parsed CourseLeaf page (split area -> part ids) and an empty one."
   ],
   "profiles": [
     {
@@ -490,6 +491,386 @@
           "title": "Orphan"
         }
       ]
+    }
+  ],
+  "programs": [
+    {
+      "slug": "undergraduate-computer-information-science-computer-science-bscs",
+      "url": "https://catalog.northeastern.edu/undergraduate/computer-information-science/computer-science/bscs/",
+      "name": "Computer Science, BSCS (Boston)",
+      "level": "undergraduate",
+      "catalog_college": "computer-information-science",
+      "program_overview": {
+        "ir_version": 1,
+        "source": "https://catalog.northeastern.edu/undergraduate/computer-information-science/computer-science/bscs/",
+        "media_type": "text/html",
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "The BSCS prepares students for careers in software and research."
+          }
+        ],
+        "routes": [],
+        "review": []
+      },
+      "program_requirements": {
+        "ir_version": 1,
+        "source": "https://catalog.northeastern.edu/undergraduate/computer-information-science/computer-science/bscs/",
+        "media_type": "text/html",
+        "blocks": [
+          {
+            "kind": "paragraph",
+            "text": "Complete all courses listed below unless otherwise indicated."
+          },
+          {
+            "kind": "heading",
+            "text": "Computer Science Requirements",
+            "level": 2
+          },
+          {
+            "kind": "heading",
+            "text": "Computer Science Overview",
+            "level": 3
+          },
+          {
+            "kind": "table",
+            "rows": [
+              [
+                "Code",
+                "Title",
+                "Hours"
+              ],
+              [
+                "CS 1200 or INPR 1000",
+                "First Year Seminar or First-Year Interdisciplinary Seminar",
+                "1"
+              ]
+            ],
+            "header_rows": 1
+          },
+          {
+            "kind": "heading",
+            "text": "Computer Science Fundamental Courses",
+            "level": 3
+          },
+          {
+            "kind": "table",
+            "rows": [
+              [
+                "Code",
+                "Title",
+                "Hours"
+              ],
+              [
+                "CS 1800 or MATH 1365 or MATH 1465",
+                "Discrete Structures or Introduction to Mathematical Reasoning or Intensive Mathematical Reasoning",
+                "4"
+              ],
+              [
+                "CS 2000 and CS 2001",
+                "Introduction to Program Design and Implementation and Lab for CS 2000",
+                "5"
+              ]
+            ],
+            "header_rows": 1
+          },
+          {
+            "kind": "heading",
+            "text": "Security Required Course",
+            "level": 3
+          },
+          {
+            "kind": "table",
+            "rows": [
+              [
+                "Code",
+                "Title",
+                "Hours"
+              ],
+              [
+                "Complete one of the following:",
+                "",
+                "4"
+              ],
+              [
+                "- CY 2550",
+                "Foundations of Cybersecurity",
+                ""
+              ],
+              [
+                "- CY 3740",
+                "Systems Security",
+                ""
+              ]
+            ],
+            "header_rows": 1
+          },
+          {
+            "kind": "heading",
+            "text": "Khoury Approved Electives",
+            "level": 2
+          },
+          {
+            "kind": "paragraph",
+            "text": "Complete 12 semester hours from the following options."
+          },
+          {
+            "kind": "table",
+            "rows": [
+              [
+                "Code",
+                "Title",
+                "Hours"
+              ],
+              [
+                "- CS 2300 or higher, except CS 5010",
+                "",
+                ""
+              ],
+              [
+                "- CS 4100",
+                "Upper-Division Elective Number 0 in Computing",
+                ""
+              ],
+              [
+                "- CS 4101",
+                "Upper-Division Elective Number 1 in Computing",
+                ""
+              ],
+              [
+                "- CS 4102",
+                "Upper-Division Elective Number 2 in Computing",
+                ""
+              ],
+              [
+                "- CS 4103",
+                "Upper-Division Elective Number 3 in Computing",
+                ""
+              ],
+              [
+                "- CS 4104",
+                "Upper-Division Elective Number 4 in Computing",
+                ""
+              ],
+              [
+                "- CS 4105",
+                "Upper-Division Elective Number 5 in Computing",
+                ""
+              ],
+              [
+                "- CS 4106",
+                "Upper-Division Elective Number 6 in Computing",
+                ""
+              ],
+              [
+                "- CS 4107",
+                "Upper-Division Elective Number 7 in Computing",
+                ""
+              ],
+              [
+                "- CS 4108",
+                "Upper-Division Elective Number 8 in Computing",
+                ""
+              ],
+              [
+                "- CS 4109",
+                "Upper-Division Elective Number 9 in Computing",
+                ""
+              ],
+              [
+                "- CS 4110",
+                "Upper-Division Elective Number 10 in Computing",
+                ""
+              ],
+              [
+                "- CS 4111",
+                "Upper-Division Elective Number 11 in Computing",
+                ""
+              ],
+              [
+                "- CS 4112",
+                "Upper-Division Elective Number 12 in Computing",
+                ""
+              ],
+              [
+                "- CS 4113",
+                "Upper-Division Elective Number 13 in Computing",
+                ""
+              ],
+              [
+                "- CS 4114",
+                "Upper-Division Elective Number 14 in Computing",
+                ""
+              ],
+              [
+                "- CS 4115",
+                "Upper-Division Elective Number 15 in Computing",
+                ""
+              ],
+              [
+                "- CS 4116",
+                "Upper-Division Elective Number 16 in Computing",
+                ""
+              ],
+              [
+                "- CS 4117",
+                "Upper-Division Elective Number 17 in Computing",
+                ""
+              ],
+              [
+                "- CS 4118",
+                "Upper-Division Elective Number 18 in Computing",
+                ""
+              ],
+              [
+                "- CS 4119",
+                "Upper-Division Elective Number 19 in Computing",
+                ""
+              ],
+              [
+                "- CS 4120",
+                "Upper-Division Elective Number 20 in Computing",
+                ""
+              ],
+              [
+                "- CS 4121",
+                "Upper-Division Elective Number 21 in Computing",
+                ""
+              ],
+              [
+                "- CS 4122",
+                "Upper-Division Elective Number 22 in Computing",
+                ""
+              ],
+              [
+                "- CS 4123",
+                "Upper-Division Elective Number 23 in Computing",
+                ""
+              ],
+              [
+                "- CS 4124",
+                "Upper-Division Elective Number 24 in Computing",
+                ""
+              ],
+              [
+                "- CS 4125",
+                "Upper-Division Elective Number 25 in Computing",
+                ""
+              ],
+              [
+                "- CS 4126",
+                "Upper-Division Elective Number 26 in Computing",
+                ""
+              ],
+              [
+                "- CS 4127",
+                "Upper-Division Elective Number 27 in Computing",
+                ""
+              ],
+              [
+                "- CS 4128",
+                "Upper-Division Elective Number 28 in Computing",
+                ""
+              ],
+              [
+                "- CS 4129",
+                "Upper-Division Elective Number 29 in Computing",
+                ""
+              ],
+              [
+                "- CS 4130",
+                "Upper-Division Elective Number 30 in Computing",
+                ""
+              ],
+              [
+                "- CS 4131",
+                "Upper-Division Elective Number 31 in Computing",
+                ""
+              ],
+              [
+                "- CS 4132",
+                "Upper-Division Elective Number 32 in Computing",
+                ""
+              ],
+              [
+                "- CS 4133",
+                "Upper-Division Elective Number 33 in Computing",
+                ""
+              ],
+              [
+                "- CS 4134",
+                "Upper-Division Elective Number 34 in Computing",
+                ""
+              ],
+              [
+                "- CS 4135",
+                "Upper-Division Elective Number 35 in Computing",
+                ""
+              ],
+              [
+                "- CS 4136",
+                "Upper-Division Elective Number 36 in Computing",
+                ""
+              ],
+              [
+                "- CS 4137",
+                "Upper-Division Elective Number 37 in Computing",
+                ""
+              ],
+              [
+                "- CS 4138",
+                "Upper-Division Elective Number 38 in Computing",
+                ""
+              ],
+              [
+                "- CS 4139",
+                "Upper-Division Elective Number 39 in Computing",
+                ""
+              ]
+            ],
+            "header_rows": 1
+          },
+          {
+            "kind": "heading",
+            "text": "Concentrations",
+            "level": 2
+          },
+          {
+            "kind": "list",
+            "items": [
+              "Artificial Intelligence",
+              "Systems"
+            ]
+          }
+        ],
+        "routes": [],
+        "review": []
+      },
+      "record_hash": "sha256:eb48b4d41ed93a421b5d52f04901fd3c"
+    },
+    {
+      "slug": "graduate-law-empty-certificate",
+      "url": "https://catalog.northeastern.edu/graduate/law/empty-certificate/",
+      "name": "Empty Certificate",
+      "level": "graduate",
+      "catalog_college": "law",
+      "program_overview": {
+        "ir_version": 1,
+        "source": "",
+        "media_type": "text/html",
+        "blocks": [],
+        "routes": [],
+        "review": []
+      },
+      "program_requirements": {
+        "ir_version": 1,
+        "source": "",
+        "media_type": "text/html",
+        "blocks": [],
+        "routes": [],
+        "review": []
+      },
+      "record_hash": "sha256:0"
     }
   ]
 }

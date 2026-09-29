@@ -41,7 +41,10 @@ and skip instead. 52 of the 68 tests in `test_deepeval_eval.py` run without it.
   hollow profile. Also pins that `ProfileSource` and `WeblinksSource` mint
   entity ids through the same `sources/entities.py` helper: if they disagreed,
   a College of Science professor's website would enrich the Khoury professor
-  with the same slug.
+  with the same slug. And `TieredProfileParser`: the accordion result untouched
+  (no API call) when it works, the Claude fallback merged under the exact DOM
+  header when the template changed, and the DOM result kept when the fallback
+  finds nothing or fails.
 - `test_courses.py` — the course corpus (catalog + term schedule): catalog parsing (title/credits/requisites,
   non-breaking spaces, unreadable blocks), entity ids that cannot collide with
   professor slugs, and the **namespace** rules — that both course sources share
@@ -59,6 +62,41 @@ and skip instead. 52 of the 68 tests in `test_deepeval_eval.py` run without it.
   `content_hash`, which decides whether ingest re-embeds, so any rendering change
   silently invalidates the index. If this fails, either the change was
   unintended, or it was intended and the index owes you a full re-ingest.
+- `test_documents.py` — tiered document parsing: the IR's JSON round trip and
+  validation; media-type sniffing (magic bytes beat a wrong label) and the
+  per-page routing rule; the HTML tier (headings, `<th>` headers, nested lists,
+  alt text, boilerplate stripped, a dropped `<h1>` restored); the PDF tier on
+  PDFs built in-test with fpdf2 — font-size and bold headings, two-column
+  reading order, running headers/page numbers/rotated text dropped, a vector
+  chart found and its labels kept out of the prose, a ruled table kept as a
+  table, subscripts kept on their line, hyphenation mended from the document's
+  own vocabulary; Tesseract row grouping and the missing-binary guard; the
+  Gemini captioner against a fake client; and `DocumentParser` end to end with
+  fake OCR and captioner — each page on its tier, weak OCR held for review,
+  missing or failing tiers recorded instead of dropped. Also pins, in a
+  subprocess with the parsing libraries blocked, that ingest can rebuild and
+  chunk a stored document without any of them.
+- `test_chunking.py` — the structure-aware chunker and `section_chunks`.
+  **The migration guarantee:** every golden chunk, rebuilt through
+  `section_chunks`, has the same id, text and metadata — so moving a source onto
+  it re-embeds nothing that fits. Then part ids (`#section@2`), continued
+  labels, heading paths, page ranges, tables split between rows with the header
+  repeated, lists between items, paragraphs between sentences, and that no piece
+  exceeds its budget.
+- `test_prune.py` — ingest `--prune`, the only code that deletes vectors: the
+  per-section refusal rule (a source whose read came back empty is refused even
+  when the namespace barely moves), the small-section allowance, dry runs that
+  delete nothing, batched deletes, the default-namespace guard, `--limit`
+  rejected, and the strict `KMP_INGEST_PRUNE` flag.
+- `test_programs.py` — the programs source, against HTML that reproduces the
+  catalog's CourseLeaf markup row for row: `areaheader` rows become headings
+  under their `<h2>`, `orclass` alternatives merge into the row above, comment
+  rows keep their hours, `div.blockindent` options are marked while the
+  `span.blockindent` "and" of a paired course is not, a page without a
+  requirements tab is not a program, and several requirement tabs are told
+  apart. Then the chunks (heading path in the label, an oversized area split
+  between rows with its header, every row surviving once, per-part `text`) and
+  the job (unchanged records not rewritten, failures counted, pacing, dry runs).
 - `test_providers.py` — embedder/generator registries, the dimension guard, the
   shared backoff policy, and that query embedding reuses the document path.
 - `test_core.py` — `RAGPipeline` orchestration: ordered sources, score floor,

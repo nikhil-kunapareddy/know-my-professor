@@ -147,8 +147,13 @@ def test_urls_cache_key_keeps_khoury_on_the_original_filename():
 def test_build_parser_picks_by_template():
     from preprocessing.sources.profiles.llm_parser import LlmProfileParser
     from preprocessing.sources.profiles.profile_parser import ProfileParser
+    from preprocessing.sources.profiles.tiered import TieredProfileParser
 
-    assert isinstance(build_parser(KHOURY), ProfileParser)
+    # Accordion colleges keep the exact parser in charge, with Claude behind it.
+    khoury = build_parser(KHOURY)
+    assert isinstance(khoury, TieredProfileParser)
+    assert isinstance(khoury.primary, ProfileParser)
+    assert isinstance(khoury.fallback, LlmProfileParser)
     assert isinstance(build_parser(COS), LlmProfileParser)
 
 
@@ -488,3 +493,71 @@ def test_shard_splits_colleges_across_cloud_run_tasks(monkeypatch):
     # every college runs exactly once, whatever the task count
     assert sorted(c.key for share in shares for c in share) == sorted(c.key for c in colleges)
     assert all(shares)
+
+
+# --- tiered profile parsing (tiered.py) ------------------------------------------
+
+_EXTRACTED = (
+    '{"name": "Jane Q. Doe", "title": "Professor", "biography": "Studies compilers.",'
+    ' "research_interests": ["type systems"], "education": [], "areas_of_interest": [],'
+    ' "labs_and_groups": [], "projects": []}'
+)
+
+
+def _tiered(response):
+    from preprocessing.sources.profiles.profile_parser import ProfileParser
+    from preprocessing.sources.profiles.tiered import TieredProfileParser
+
+    fallback = _parser(response)
+    calls = []
+    original = fallback._extract
+    fallback._extract = lambda text: calls.append(text) or original(text)
+    return TieredProfileParser(ProfileParser(), fallback), calls
+
+
+def test_tiered_parser_never_calls_the_llm_when_the_accordion_works():
+    from tests.test_scraper import PROFILE_HTML, URL
+
+    parser, calls = _tiered(_FakeResponse(_EXTRACTED))
+    profile = parser.parse(URL, PROFILE_HTML)
+    assert calls == []
+    assert profile.parser_tier == "accordion"
+    assert profile.biography == "Jane works on PL."
+
+
+def test_tiered_parser_falls_back_when_the_template_changed():
+    """Header selectors still match, the sections moved: DOM header, Claude sections."""
+    html = (
+        '<html><body><h1 class="single-people__header-title">Jane Doe</h1>'
+        '<p class="single-people__header-description">Associate Professor</p>'
+        "<section class='new-template'>" + ("Jane Doe is a professor of compilers. " * 12) + "</section>"
+        "</body></html>"
+    )
+    parser, calls = _tiered(_FakeResponse(_EXTRACTED))
+    profile = parser.parse("https://www.khoury.northeastern.edu/people/jane-doe/", html)
+    assert len(calls) == 1
+    assert profile.parser_tier == "accordion+llm"
+    assert profile.name == "Jane Doe"  # the exact DOM value wins over "Jane Q. Doe"
+    assert profile.title == "Associate Professor"
+    assert profile.biography == "Studies compilers." and profile.research_interests == ["type systems"]
+    assert profile.slug == "jane-doe"
+
+
+def test_tiered_parser_keeps_the_exact_result_when_the_fallback_has_nothing():
+    from preprocessing.sources.profiles.profile_parser import ProfileParser
+    from preprocessing.sources.profiles.tiered import TieredProfileParser
+
+    empty = "<html><body><h1 class='single-people__header-title'>Staff Member</h1></body></html>"
+    url = "https://www.khoury.northeastern.edu/people/staff/"
+
+    # a thin page never reaches the API
+    parser, calls = _tiered(_FakeResponse(_EXTRACTED))
+    assert parser.parse(url, empty).parser_tier == "accordion" and calls == []
+
+    # a failing fallback does not fail the record
+    class Broken:
+        def parse(self, url, html):
+            raise RuntimeError("anthropic is down")
+
+    profile = TieredProfileParser(ProfileParser(), Broken()).parse(url, empty)
+    assert profile.name == "Staff Member" and profile.parser_tier == "accordion"

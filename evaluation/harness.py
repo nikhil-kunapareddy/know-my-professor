@@ -19,7 +19,7 @@ from pathlib import Path
 
 from core.llm.prompts import cited_numbers
 from core.pipeline import NO_ANSWER
-from shared.config import PEOPLE_NAMESPACE
+from shared.config import PART_SEPARATOR, PEOPLE_NAMESPACE
 
 #: Vector IDs are ``{slug}#{section_type}``.
 ID_SEPARATOR = "#"
@@ -31,9 +31,13 @@ def slug_of(document_id: str) -> str:
 
 
 def section_of(document_id: str) -> str:
-    """The section type a chunk came from ("" if the id has none)."""
+    """The section type a chunk came from ("" if the id has none).
+
+    Part 2+ of a split section (``x#program_requirements@2``) is still that
+    section; without stripping the part, it would score as a section miss.
+    """
     _, _, section = document_id.partition(ID_SEPARATOR)
-    return section
+    return section.split(PART_SEPARATOR, 1)[0]
 
 
 @dataclass(frozen=True)
