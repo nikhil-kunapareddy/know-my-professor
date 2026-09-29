@@ -34,7 +34,8 @@ EMBED_MAX_RETRIES = 6
 # --- Pinecone --------------------------------------------------------------
 
 # 1024-dim index for Mistral vectors. The old 3072-dim "know-my-professor"
-# index (Gemini embeddings) is kept intact for rollback only.
+# index (Gemini embeddings) was deleted 2026-09-25: no embedder of that width
+# was left to query it, and its 1,463 vectors were the June Khoury-only corpus.
 PINECONE_DEFAULT_INDEX = "know-my-professor-m1024"
 PINECONE_DEFAULT_CLOUD = "aws"
 PINECONE_DEFAULT_REGION = "us-east-1"
