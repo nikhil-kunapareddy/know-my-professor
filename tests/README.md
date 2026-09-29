@@ -88,6 +88,15 @@ and skip instead. 52 of the 68 tests in `test_deepeval_eval.py` run without it.
   when the namespace barely moves), the small-section allowance, dry runs that
   delete nothing, batched deletes, the default-namespace guard, `--limit`
   rejected, and the strict `KMP_INGEST_PRUNE` flag.
+- `test_programs.py` — the programs source, against HTML that reproduces the
+  catalog's CourseLeaf markup row for row: `areaheader` rows become headings
+  under their `<h2>`, `orclass` alternatives merge into the row above, comment
+  rows keep their hours, `div.blockindent` options are marked while the
+  `span.blockindent` "and" of a paired course is not, a page without a
+  requirements tab is not a program, and several requirement tabs are told
+  apart. Then the chunks (heading path in the label, an oversized area split
+  between rows with its header, every row surviving once, per-part `text`) and
+  the job (unchanged records not rewritten, failures counted, pacing, dry runs).
 - `test_providers.py` — embedder/generator registries, the dimension guard, the
   shared backoff policy, and that query embedding reuses the document path.
 - `test_core.py` — `RAGPipeline` orchestration: ordered sources, score floor,

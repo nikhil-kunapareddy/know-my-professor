@@ -44,6 +44,11 @@ FETCH_BATCH_SIZE = 100
 #: Pinecone's cap on ids per delete call.
 DELETE_BATCH_SIZE = 1000
 
+#: Joins a section's vector id to its part number when structure-aware chunking
+#: splits it: ``{entity}#{section}@2``. Here, not in preprocessing, because both
+#: ends read ids -- ingest mints and prunes them, the eval harness scores them.
+PART_SEPARATOR = "@"
+
 # The namespace holding the people corpus (profiles + weblinks). It lives here,
 # not on the Source, because BOTH ends must name the same partition: ingest
 # writes it and /chat reads it. A mismatch is silent -- the query succeeds

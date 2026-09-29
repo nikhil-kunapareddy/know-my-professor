@@ -84,7 +84,17 @@ def test_section_chunks_matches_render_section_for_plain_values():
     for value in ["One line.", "Two\n\nparagraphs, kept as written.", ["a", "b"], [1, 2]]:
         [chunk] = section_chunks("x#bio", "Jane (Prof)", "Bio", value, {"section_type": "bio"})
         expected = render_section("Jane (Prof)", "Bio", value)
-        assert chunk == Chunk("x#bio", expected, {"section_type": "bio", "content_hash": content_hash(expected)})
+        assert chunk == Chunk(
+            "x#bio", expected, {"section_type": "bio", "text": expected, "content_hash": content_hash(expected)}
+        )
+
+
+def test_every_part_carries_its_own_text_in_metadata():
+    """The prompt reads metadata["text"]; a part must never show another part's content."""
+    items = [f"Item {i} with enough words to fill a budget quickly." for i in range(20)]
+    chunks = section_chunks("x#f", "Jane", "Funding", items, {"text": "the caller's stale text"}, max_chars=200)
+    assert len(chunks) > 1
+    assert all(c.metadata["text"] == c.text for c in chunks)
 
 
 def test_empty_content_yields_no_chunks():

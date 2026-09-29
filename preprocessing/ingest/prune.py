@@ -27,7 +27,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 
-from ..sources.base import PART_SEPARATOR
+from shared.config import PART_SEPARATOR
 
 #: Largest fraction of any one section's vectors a prune may delete unasked.
 PRUNE_MAX_FRACTION = 0.10

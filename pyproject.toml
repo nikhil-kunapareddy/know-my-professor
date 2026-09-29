@@ -53,6 +53,13 @@ courses = [
     "beautifulsoup4==4.12.3",
     "google-cloud-storage==2.18.2",
 ]
+# Degree requirements from the same catalog. Parsed by DOM rules (courseleaf.py)
+# into preprocessing/documents' IR, which is standard library -- no trafilatura.
+programs = [
+    "requests==2.32.3",
+    "beautifulsoup4==4.12.3",
+    "google-cloud-storage==2.18.2",
+]
 # Banner returns JSON, so no HTML parser is needed here.
 schedule = [
     "requests==2.32.3",
@@ -137,7 +144,7 @@ eval = [
 # GitHub Actions installs the FULL set instead, so cross-extra conflicts still
 # get caught on PRs.
 ci = [
-    "know-my-professor[api,profiles,weblinks,courses,schedule,publications,grants,ingest,documents,dev]",
+    "know-my-professor[api,profiles,weblinks,courses,schedule,publications,grants,programs,ingest,documents,dev]",
     "httpx",  # required by fastapi's TestClient
 ]
 

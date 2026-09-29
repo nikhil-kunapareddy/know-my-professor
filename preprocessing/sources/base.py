@@ -20,6 +20,8 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
+from shared.config import PART_SEPARATOR
+
 from ..documents.chunking import chunk_blocks
 from ..documents.ir import Block, BlockKind, Document
 
@@ -80,9 +82,8 @@ def fallback_label(section_type: str) -> str:
 
 # --- structure-aware sections (preprocessing/documents) ----------------------
 
-#: Joins a section's vector id to its part number: ``{entity}#{section}@2``.
-#: Section keys may not contain it; the registry checks at import.
-PART_SEPARATOR = "@"
+# PART_SEPARATOR (shared.config) joins a section's id to its part number:
+# ``{entity}#{section}@2``. Section keys may not contain it; the registry checks.
 
 
 def part_vector_id(base_id: str, part: int) -> str:
@@ -132,6 +133,9 @@ def section_chunks(
     - a part from paginated input carries ``page_start``/``page_end``. Two
       numbers, because Pinecone metadata lists may only hold strings.
 
+    Every chunk's metadata carries its own ``text``, as every source's does:
+    it is what the prompt shows the model.
+
     A section that shrinks leaves its old tail parts behind in Pinecone; ingest's
     ``--prune`` is what removes them.
     """
@@ -140,7 +144,10 @@ def section_chunks(
     for part, piece in enumerate(pieces, 1):
         heading = " > ".join((label, *piece.path)) + (" (continued)" if piece.continued else "")
         text = render_section(header, heading, piece.body)
-        meta = {**metadata, "content_hash": content_hash(text)}
+        # ``text`` is set per part, never inherited: the prompt builds the
+        # model's context from ``metadata["text"]``, so a part carrying the
+        # caller's text would show the model some other part's content.
+        meta = {**metadata, "text": text, "content_hash": content_hash(text)}
         if len(pieces) > 1:
             meta["part"] = part
         if piece.path:
