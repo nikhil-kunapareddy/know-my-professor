@@ -14,10 +14,13 @@ from __future__ import annotations
 
 from collections import Counter
 
-from .base import PART_SEPARATOR, Chunk, Source
+from shared.config import PART_SEPARATOR
+
+from .base import Chunk, Source
 from .courses.source import CourseSource
 from .grants.source import GrantsSource
 from .profiles.source import ProfileSource
+from .programs.source import ProgramSource
 from .publications.source import PublicationsSource
 from .schedule.source import ScheduleSource
 from .weblinks.source import WeblinksSource
@@ -31,6 +34,7 @@ SOURCES: tuple[Source, ...] = (
     GrantsSource(),
     CourseSource(),
     ScheduleSource(),
+    ProgramSource(),
 )
 
 
