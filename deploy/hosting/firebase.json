@@ -1,0 +1,21 @@
+{
+  "hosting": {
+    "site": "knowmyprof",
+    "public": "public",
+    "ignore": ["**/.*"],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, max-age=300" },
+          { "key": "X-Content-Type-Options", "value": "nosniff" },
+          { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+          {
+            "key": "Content-Security-Policy",
+            "value": "default-src 'none'; frame-src https://kmp-frontend-309233821309.us-central1.run.app; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+          }
+        ]
+      }
+    ]
+  }
+}

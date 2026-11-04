@@ -10,7 +10,7 @@ import pytest
 import requests
 
 from serving.frontend.api_client import ChatClient, ChatError
-from serving.frontend.formatting import format_citation, sources_label
+from serving.frontend.formatting import format_citation, redirect_script, sources_label
 from shared.schemas import Citation
 
 
@@ -165,3 +165,18 @@ def test_citation_tolerates_a_missing_name():
 def test_sources_label_is_singular_for_one():
     assert sources_label(1) == "Source (1)"
     assert sources_label(3) == "Sources (3)"
+
+
+def test_redirect_spares_the_frame_and_localhost():
+    # Without either guard the redirect breaks something real: the framed copy
+    # on the public site would reload itself forever, and a local
+    # `streamlit run` would bounce to production.
+    script = redirect_script("https://knowmyprof.web.app")
+    assert "window.top === window.self" in script
+    assert "hostname.endsWith('.run.app')" in script
+    assert 'window.location.replace("https://knowmyprof.web.app")' in script
+
+
+def test_redirect_target_is_quoted_as_a_js_string():
+    script = redirect_script('https://x.example/"); alert(1); ("')
+    assert 'replace("https://x.example/\\"); alert(1); (\\"")' in script
