@@ -11,6 +11,7 @@ import os
 import streamlit as st
 
 from serving.frontend.api_client import ChatClient, ChatError
+from serving.frontend.formatting import redirect_script
 from serving.frontend.views import render_citations, render_error
 
 API_URL = os.environ.get(
@@ -25,6 +26,9 @@ def get_client() -> ChatClient:
 
 
 st.set_page_config(page_title="Know My Professor")
+# Direct visits to the run.app URL go to knowmyprof.web.app; the framed copy
+# there, and local runs, are left alone (see formatting.redirect_script).
+st.html(redirect_script(), unsafe_allow_javascript=True)
 st.title("Know My Professor")
 st.caption("Ask about Northeastern Khoury faculty.")
 
