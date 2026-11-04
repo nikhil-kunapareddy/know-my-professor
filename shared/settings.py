@@ -54,6 +54,15 @@ def _int_env(name: str, default: int) -> int:
         raise MissingSettingError(f"env var {name} must be an integer, got {raw!r}") from None
 
 
+def env_flag(name: str) -> bool:
+    """A boolean env var. Only "1"/"true"/"yes"/"on" (any case) are true.
+
+    Strict on purpose: the one flag using it (KMP_INGEST_PRUNE) deletes
+    vectors, so an unrecognised value must mean off.
+    """
+    return (os.environ.get(name) or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _rerank_provider_env() -> str | None:
     """RERANK_PROVIDER, where "none"/"off"/"false"/"0"/"disabled" mean no reranker.
 

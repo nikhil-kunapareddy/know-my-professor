@@ -64,6 +64,7 @@ class ProfileParser:
             labs_and_groups=self._as_list(sections.get("labs_and_groups")),
             projects=self._as_list(sections.get("projects")),
             raw_aside=aside,
+            parser_tier="accordion",
         )
 
     # --- helpers -----------------------------------------------------------

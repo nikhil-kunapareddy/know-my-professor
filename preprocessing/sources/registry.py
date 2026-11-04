@@ -14,10 +14,13 @@ from __future__ import annotations
 
 from collections import Counter
 
+from shared.config import PART_SEPARATOR
+
 from .base import Chunk, Source
 from .courses.source import CourseSource
 from .grants.source import GrantsSource
 from .profiles.source import ProfileSource
+from .programs.source import ProgramSource
 from .publications.source import PublicationsSource
 from .schedule.source import ScheduleSource
 from .weblinks.source import WeblinksSource
@@ -31,6 +34,7 @@ SOURCES: tuple[Source, ...] = (
     GrantsSource(),
     CourseSource(),
     ScheduleSource(),
+    ProgramSource(),
 )
 
 
@@ -44,6 +48,17 @@ def _validate(sources: tuple[Source, ...]) -> None:
         duplicates = sorted({v for v, n in Counter(values).items() if n > 1})
         if duplicates:
             raise ValueError(f"duplicate {label}(s) across sources: {duplicates}")
+
+    # A key holding "#" or the part separator would make ``{entity}#{key}@{n}``
+    # ambiguous, and prune reads the section back out of an id.
+    reserved = sorted(
+        spec.key
+        for s in sources
+        for spec in s.sections
+        if "#" in spec.key or PART_SEPARATOR in spec.key
+    )
+    if reserved:
+        raise ValueError(f"section key(s) {reserved} contain '#' or {PART_SEPARATOR!r}")
 
     if not any(not s.depends_on_entities for s in sources):
         raise ValueError("at least one source must define entities (depends_on_entities=False)")

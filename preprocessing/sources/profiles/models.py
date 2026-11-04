@@ -27,3 +27,7 @@ class Profile:
     labs_and_groups: list[str]
     projects: list[str]
     raw_aside: dict[str, list]
+    #: Which parser produced the record: "accordion" (exact DOM rules), "llm"
+    #: (Claude), or "accordion+llm" (DOM header, Claude-extracted sections --
+    #: see tiered.py). Stored for auditing only; no chunk reads it.
+    parser_tier: str | None = None

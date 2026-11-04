@@ -379,6 +379,134 @@
       "slug": null
     }
   ],
+  "programs": [
+    {
+      "chunks": [
+        {
+          "metadata": {
+            "catalog_college": "computer-information-science",
+            "content_hash": "sha256:f9071f755ec0e52874153f1f1a4b3f7c",
+            "program_level": "undergraduate",
+            "program_name": "Computer Science, BSCS (Boston)",
+            "section_type": "program_overview",
+            "text": "Computer Science, BSCS (Boston) — Undergraduate program\nProgram overview:\nThe BSCS prepares students for careers in software and research.",
+            "url": "https://catalog.northeastern.edu/undergraduate/computer-information-science/computer-science/bscs/"
+          },
+          "text": "Computer Science, BSCS (Boston) — Undergraduate program\nProgram overview:\nThe BSCS prepares students for careers in software and research.",
+          "vector_id": "program-undergraduate-computer-information-science-computer-science-bscs#program_overview"
+        },
+        {
+          "metadata": {
+            "catalog_college": "computer-information-science",
+            "content_hash": "sha256:fd19b62cf3e3e8e5e05333c607621281",
+            "part": 1,
+            "program_level": "undergraduate",
+            "program_name": "Computer Science, BSCS (Boston)",
+            "section_type": "program_requirements",
+            "text": "Computer Science, BSCS (Boston) — Undergraduate program\nProgram requirements:\nComplete all courses listed below unless otherwise indicated.",
+            "url": "https://catalog.northeastern.edu/undergraduate/computer-information-science/computer-science/bscs/"
+          },
+          "text": "Computer Science, BSCS (Boston) — Undergraduate program\nProgram requirements:\nComplete all courses listed below unless otherwise indicated.",
+          "vector_id": "program-undergraduate-computer-information-science-computer-science-bscs#program_requirements"
+        },
+        {
+          "metadata": {
+            "catalog_college": "computer-information-science",
+            "content_hash": "sha256:03cc3a73208eb39ecafba5d00c79281b",
+            "heading_path": "Computer Science Requirements > Computer Science Overview",
+            "part": 2,
+            "program_level": "undergraduate",
+            "program_name": "Computer Science, BSCS (Boston)",
+            "section_type": "program_requirements",
+            "text": "Computer Science, BSCS (Boston) — Undergraduate program\nProgram requirements > Computer Science Requirements > Computer Science Overview:\n| Code | Title | Hours |\n| --- | --- | --- |\n| CS 1200 or INPR 1000 | First Year Seminar or First-Year Interdisciplinary Seminar | 1 |",
+            "url": "https://catalog.northeastern.edu/undergraduate/computer-information-science/computer-science/bscs/"
+          },
+          "text": "Computer Science, BSCS (Boston) — Undergraduate program\nProgram requirements > Computer Science Requirements > Computer Science Overview:\n| Code | Title | Hours |\n| --- | --- | --- |\n| CS 1200 or INPR 1000 | First Year Seminar or First-Year Interdisciplinary Seminar | 1 |",
+          "vector_id": "program-undergraduate-computer-information-science-computer-science-bscs#program_requirements@2"
+        },
+        {
+          "metadata": {
+            "catalog_college": "computer-information-science",
+            "content_hash": "sha256:b1cf5a416761f36d3dafd575f19cf4bb",
+            "heading_path": "Computer Science Requirements > Computer Science Fundamental Courses",
+            "part": 3,
+            "program_level": "undergraduate",
+            "program_name": "Computer Science, BSCS (Boston)",
+            "section_type": "program_requirements",
+            "text": "Computer Science, BSCS (Boston) — Undergraduate program\nProgram requirements > Computer Science Requirements > Computer Science Fundamental Courses:\n| Code | Title | Hours |\n| --- | --- | --- |\n| CS 1800 or MATH 1365 or MATH 1465 | Discrete Structures or Introduction to Mathematical Reasoning or Intensive Mathematical Reasoning | 4 |\n| CS 2000 and CS 2001 | Introduction to Program Design and Implementation and Lab for CS 2000 | 5 |",
+            "url": "https://catalog.northeastern.edu/undergraduate/computer-information-science/computer-science/bscs/"
+          },
+          "text": "Computer Science, BSCS (Boston) — Undergraduate program\nProgram requirements > Computer Science Requirements > Computer Science Fundamental Courses:\n| Code | Title | Hours |\n| --- | --- | --- |\n| CS 1800 or MATH 1365 or MATH 1465 | Discrete Structures or Introduction to Mathematical Reasoning or Intensive Mathematical Reasoning | 4 |\n| CS 2000 and CS 2001 | Introduction to Program Design and Implementation and Lab for CS 2000 | 5 |",
+          "vector_id": "program-undergraduate-computer-information-science-computer-science-bscs#program_requirements@3"
+        },
+        {
+          "metadata": {
+            "catalog_college": "computer-information-science",
+            "content_hash": "sha256:9603c94f39c725cba779835ae7726309",
+            "heading_path": "Computer Science Requirements > Security Required Course",
+            "part": 4,
+            "program_level": "undergraduate",
+            "program_name": "Computer Science, BSCS (Boston)",
+            "section_type": "program_requirements",
+            "text": "Computer Science, BSCS (Boston) — Undergraduate program\nProgram requirements > Computer Science Requirements > Security Required Course:\n| Code | Title | Hours |\n| --- | --- | --- |\n| Complete one of the following: |  | 4 |\n| - CY 2550 | Foundations of Cybersecurity |  |\n| - CY 3740 | Systems Security |  |",
+            "url": "https://catalog.northeastern.edu/undergraduate/computer-information-science/computer-science/bscs/"
+          },
+          "text": "Computer Science, BSCS (Boston) — Undergraduate program\nProgram requirements > Computer Science Requirements > Security Required Course:\n| Code | Title | Hours |\n| --- | --- | --- |\n| Complete one of the following: |  | 4 |\n| - CY 2550 | Foundations of Cybersecurity |  |\n| - CY 3740 | Systems Security |  |",
+          "vector_id": "program-undergraduate-computer-information-science-computer-science-bscs#program_requirements@4"
+        },
+        {
+          "metadata": {
+            "catalog_college": "computer-information-science",
+            "content_hash": "sha256:b142fe08f539bbf94c6eced678115309",
+            "heading_path": "Khoury Approved Electives",
+            "part": 5,
+            "program_level": "undergraduate",
+            "program_name": "Computer Science, BSCS (Boston)",
+            "section_type": "program_requirements",
+            "text": "Computer Science, BSCS (Boston) — Undergraduate program\nProgram requirements > Khoury Approved Electives:\nComplete 12 semester hours from the following options.\n\n| Code | Title | Hours |\n| --- | --- | --- |\n| - CS 2300 or higher, except CS 5010 |  |  |\n| - CS 4100 | Upper-Division Elective Number 0 in Computing |  |\n| - CS 4101 | Upper-Division Elective Number 1 in Computing |  |\n| - CS 4102 | Upper-Division Elective Number 2 in Computing |  |\n| - CS 4103 | Upper-Division Elective Number 3 in Computing |  |\n| - CS 4104 | Upper-Division Elective Number 4 in Computing |  |\n| - CS 4105 | Upper-Division Elective Number 5 in Computing |  |\n| - CS 4106 | Upper-Division Elective Number 6 in Computing |  |\n| - CS 4107 | Upper-Division Elective Number 7 in Computing |  |\n| - CS 4108 | Upper-Division Elective Number 8 in Computing |  |\n| - CS 4109 | Upper-Division Elective Number 9 in Computing |  |\n| - CS 4110 | Upper-Division Elective Number 10 in Computing |  |\n| - CS 4111 | Upper-Division Elective Number 11 in Computing |  |\n| - CS 4112 | Upper-Division Elective Number 12 in Computing |  |\n| - CS 4113 | Upper-Division Elective Number 13 in Computing |  |\n| - CS 4114 | Upper-Division Elective Number 14 in Computing |  |\n| - CS 4115 | Upper-Division Elective Number 15 in Computing |  |\n| - CS 4116 | Upper-Division Elective Number 16 in Computing |  |\n| - CS 4117 | Upper-Division Elective Number 17 in Computing |  |\n| - CS 4118 | Upper-Division Elective Number 18 in Computing |  |\n| - CS 4119 | Upper-Division Elective Number 19 in Computing |  |\n| - CS 4120 | Upper-Division Elective Number 20 in Computing |  |\n| - CS 4121 | Upper-Division Elective Number 21 in Computing |  |",
+            "url": "https://catalog.northeastern.edu/undergraduate/computer-information-science/computer-science/bscs/"
+          },
+          "text": "Computer Science, BSCS (Boston) — Undergraduate program\nProgram requirements > Khoury Approved Electives:\nComplete 12 semester hours from the following options.\n\n| Code | Title | Hours |\n| --- | --- | --- |\n| - CS 2300 or higher, except CS 5010 |  |  |\n| - CS 4100 | Upper-Division Elective Number 0 in Computing |  |\n| - CS 4101 | Upper-Division Elective Number 1 in Computing |  |\n| - CS 4102 | Upper-Division Elective Number 2 in Computing |  |\n| - CS 4103 | Upper-Division Elective Number 3 in Computing |  |\n| - CS 4104 | Upper-Division Elective Number 4 in Computing |  |\n| - CS 4105 | Upper-Division Elective Number 5 in Computing |  |\n| - CS 4106 | Upper-Division Elective Number 6 in Computing |  |\n| - CS 4107 | Upper-Division Elective Number 7 in Computing |  |\n| - CS 4108 | Upper-Division Elective Number 8 in Computing |  |\n| - CS 4109 | Upper-Division Elective Number 9 in Computing |  |\n| - CS 4110 | Upper-Division Elective Number 10 in Computing |  |\n| - CS 4111 | Upper-Division Elective Number 11 in Computing |  |\n| - CS 4112 | Upper-Division Elective Number 12 in Computing |  |\n| - CS 4113 | Upper-Division Elective Number 13 in Computing |  |\n| - CS 4114 | Upper-Division Elective Number 14 in Computing |  |\n| - CS 4115 | Upper-Division Elective Number 15 in Computing |  |\n| - CS 4116 | Upper-Division Elective Number 16 in Computing |  |\n| - CS 4117 | Upper-Division Elective Number 17 in Computing |  |\n| - CS 4118 | Upper-Division Elective Number 18 in Computing |  |\n| - CS 4119 | Upper-Division Elective Number 19 in Computing |  |\n| - CS 4120 | Upper-Division Elective Number 20 in Computing |  |\n| - CS 4121 | Upper-Division Elective Number 21 in Computing |  |",
+          "vector_id": "program-undergraduate-computer-information-science-computer-science-bscs#program_requirements@5"
+        },
+        {
+          "metadata": {
+            "catalog_college": "computer-information-science",
+            "content_hash": "sha256:a1b46028f52ffa2aa915598646fa3159",
+            "heading_path": "Khoury Approved Electives",
+            "part": 6,
+            "program_level": "undergraduate",
+            "program_name": "Computer Science, BSCS (Boston)",
+            "section_type": "program_requirements",
+            "text": "Computer Science, BSCS (Boston) — Undergraduate program\nProgram requirements > Khoury Approved Electives (continued):\n| Code | Title | Hours |\n| --- | --- | --- |\n| - CS 4122 | Upper-Division Elective Number 22 in Computing |  |\n| - CS 4123 | Upper-Division Elective Number 23 in Computing |  |\n| - CS 4124 | Upper-Division Elective Number 24 in Computing |  |\n| - CS 4125 | Upper-Division Elective Number 25 in Computing |  |\n| - CS 4126 | Upper-Division Elective Number 26 in Computing |  |\n| - CS 4127 | Upper-Division Elective Number 27 in Computing |  |\n| - CS 4128 | Upper-Division Elective Number 28 in Computing |  |\n| - CS 4129 | Upper-Division Elective Number 29 in Computing |  |\n| - CS 4130 | Upper-Division Elective Number 30 in Computing |  |\n| - CS 4131 | Upper-Division Elective Number 31 in Computing |  |\n| - CS 4132 | Upper-Division Elective Number 32 in Computing |  |\n| - CS 4133 | Upper-Division Elective Number 33 in Computing |  |\n| - CS 4134 | Upper-Division Elective Number 34 in Computing |  |\n| - CS 4135 | Upper-Division Elective Number 35 in Computing |  |\n| - CS 4136 | Upper-Division Elective Number 36 in Computing |  |\n| - CS 4137 | Upper-Division Elective Number 37 in Computing |  |\n| - CS 4138 | Upper-Division Elective Number 38 in Computing |  |\n| - CS 4139 | Upper-Division Elective Number 39 in Computing |  |",
+            "url": "https://catalog.northeastern.edu/undergraduate/computer-information-science/computer-science/bscs/"
+          },
+          "text": "Computer Science, BSCS (Boston) — Undergraduate program\nProgram requirements > Khoury Approved Electives (continued):\n| Code | Title | Hours |\n| --- | --- | --- |\n| - CS 4122 | Upper-Division Elective Number 22 in Computing |  |\n| - CS 4123 | Upper-Division Elective Number 23 in Computing |  |\n| - CS 4124 | Upper-Division Elective Number 24 in Computing |  |\n| - CS 4125 | Upper-Division Elective Number 25 in Computing |  |\n| - CS 4126 | Upper-Division Elective Number 26 in Computing |  |\n| - CS 4127 | Upper-Division Elective Number 27 in Computing |  |\n| - CS 4128 | Upper-Division Elective Number 28 in Computing |  |\n| - CS 4129 | Upper-Division Elective Number 29 in Computing |  |\n| - CS 4130 | Upper-Division Elective Number 30 in Computing |  |\n| - CS 4131 | Upper-Division Elective Number 31 in Computing |  |\n| - CS 4132 | Upper-Division Elective Number 32 in Computing |  |\n| - CS 4133 | Upper-Division Elective Number 33 in Computing |  |\n| - CS 4134 | Upper-Division Elective Number 34 in Computing |  |\n| - CS 4135 | Upper-Division Elective Number 35 in Computing |  |\n| - CS 4136 | Upper-Division Elective Number 36 in Computing |  |\n| - CS 4137 | Upper-Division Elective Number 37 in Computing |  |\n| - CS 4138 | Upper-Division Elective Number 38 in Computing |  |\n| - CS 4139 | Upper-Division Elective Number 39 in Computing |  |",
+          "vector_id": "program-undergraduate-computer-information-science-computer-science-bscs#program_requirements@6"
+        },
+        {
+          "metadata": {
+            "catalog_college": "computer-information-science",
+            "content_hash": "sha256:9f547451bd9d8069ae8c7e3efefab6e0",
+            "heading_path": "Concentrations",
+            "part": 7,
+            "program_level": "undergraduate",
+            "program_name": "Computer Science, BSCS (Boston)",
+            "section_type": "program_requirements",
+            "text": "Computer Science, BSCS (Boston) — Undergraduate program\nProgram requirements > Concentrations:\n- Artificial Intelligence\n- Systems",
+            "url": "https://catalog.northeastern.edu/undergraduate/computer-information-science/computer-science/bscs/"
+          },
+          "text": "Computer Science, BSCS (Boston) — Undergraduate program\nProgram requirements > Concentrations:\n- Artificial Intelligence\n- Systems",
+          "vector_id": "program-undergraduate-computer-information-science-computer-science-bscs#program_requirements@7"
+        }
+      ],
+      "slug": "undergraduate-computer-information-science-computer-science-bscs"
+    },
+    {
+      "chunks": [],
+      "slug": "graduate-law-empty-certificate"
+    }
+  ],
   "publications": [
     {
       "chunks": [

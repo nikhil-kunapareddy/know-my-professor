@@ -83,6 +83,13 @@ provider, so neither changes when you add one.
 re-embeds only what changed; an embedder whose dimension doesn't match the index
 refuses to start rather than failing halfway through an upsert.
 
+**New formats go through one tiered parser.** HTML, PDFs and images are
+probed page by page and sent to the cheapest tier that can read them: the page's
+own structure (DOM or PDF text layer), OCR for scans, or a vision model for
+figures. Every tier writes the same typed blocks — headings, paragraphs, lists,
+tables, figures — and chunks are cut along them, so a table keeps its header
+row and a chunk knows which section it came from. See `preprocessing/documents/`.
+
 **Answers are measured, not trusted.** A golden question set scores retrieval
 and citations on every change, so "does this feel better?" becomes a number.
 
@@ -90,7 +97,7 @@ and citations on every change, so "does this feel better?" becomes a number.
 
 ```
 core/           the RAG pipeline: retrieve → score → generate
-preprocessing/  scrapers, website extraction, chunking, ingest
+preprocessing/  scrapers, website extraction, tiered document parsing, chunking, ingest
 shared/         config, settings, embeddings, the API contract
 serving/        FastAPI backend · Streamlit frontend
 evaluation/     golden questions + scoring

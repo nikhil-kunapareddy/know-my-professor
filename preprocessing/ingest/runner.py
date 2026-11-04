@@ -23,6 +23,12 @@ Usage:
   python -m preprocessing.ingest.runner --dry-run --limit 5
   python -m preprocessing.ingest.runner --limit 5
   python -m preprocessing.ingest.runner            # full ingest
+  python -m preprocessing.ingest.runner --prune --dry-run   # what prune would delete
+  python -m preprocessing.ingest.runner --prune    # full ingest, then delete stale vectors
+
+--prune (or KMP_INGEST_PRUNE=1, for the Job) deletes vectors this run no longer
+produces. It needs a full run, and refuses per namespace when a deletion looks
+like a failed read -- see prune.py.
 """
 
 from __future__ import annotations
@@ -36,11 +42,12 @@ from pinecone import Pinecone
 from shared.config import EMBED_RATE_LIMIT_SLEEP_SECONDS, gcs_bucket
 from shared.embeddings import build_embedder
 from shared.gcs import GCSStore
-from shared.settings import IngestSettings, MissingSettingError, require_env
+from shared.settings import IngestSettings, MissingSettingError, env_flag, require_env
 
 from ..sources.base import Chunk
 from ..sources.registry import SOURCES, dependent_sources, entity_sources
 from .pinecone_store import PineconeStore
+from .prune import PRUNE_MAX_FRACTION, plan_prune
 
 EMBED_SLICE = 25  # chunks embedded + upserted per progress step
 
@@ -127,10 +134,26 @@ def main() -> None:
         default=None,
         help="Pinecone index name (default: $PINECONE_INDEX_NAME, else shared.config)",
     )
+    parser.add_argument(
+        "--prune",
+        action="store_true",
+        default=env_flag("KMP_INGEST_PRUNE"),
+        help="After ingesting, delete vectors this run no longer produces "
+        "(default: $KMP_INGEST_PRUNE). With --dry-run, only report them.",
+    )
+    parser.add_argument(
+        "--prune-max-fraction",
+        type=float,
+        default=PRUNE_MAX_FRACTION,
+        help="Refuse to prune more than this fraction of any one section (default: %(default)s)",
+    )
     args = parser.parse_args()
 
     if not args.bucket:
         sys.exit("error: --bucket or KMP_GCS_BUCKET env required")
+    if args.prune and args.limit is not None:
+        # Every vector outside the --limit slice would look stale.
+        parser.error("--prune needs a full run; it cannot be combined with --limit")
 
     store = GCSStore(args.bucket)
     print(f"Sources: {', '.join(s.name for s in SOURCES)}")
@@ -145,6 +168,17 @@ def main() -> None:
         for c in sample[:6]:
             print(f"\n[{c.vector_id}]")
             print(c.text[:300] + ("..." if len(c.text) > 300 else ""))
+        if not args.prune:
+            return
+        # A prune dry run reads the index -- listing ids -- but never embeds,
+        # creates or deletes, so it needs the Pinecone key and nothing else.
+        try:
+            settings = IngestSettings.from_env(bucket=args.bucket, index_name=args.index)
+        except MissingSettingError as e:
+            sys.exit(f"error: {e}")
+        read_only = PineconeStore(Pinecone(api_key=settings.pinecone_api_key).Index(settings.index_name))
+        if _prune(read_only, grouped, args.prune_max_fraction, dry_run=True):
+            sys.exit("error: prune refused for at least one namespace (see above)")
         return
 
     # Validate every setting and credential before the first paid call, so a
@@ -201,6 +235,41 @@ def main() -> None:
         embedded += len(pending)
 
     print(f"Done. {embedded} chunk(s) embedded." if embedded else "Nothing to embed. Done.")
+
+    # Only after every namespace upserted: a run that died part-way never
+    # reaches here, so it cannot prune against a half-written index.
+    if args.prune and _prune(pinecone_store, grouped, args.prune_max_fraction, dry_run=False):
+        sys.exit("error: prune refused for at least one namespace (see above)")
+
+
+def _prune(
+    store: PineconeStore,
+    grouped: dict[str | None, list[Chunk]],
+    max_fraction: float,
+    *,
+    dry_run: bool,
+) -> bool:
+    """Delete (or, dry, report) each namespace's stale vectors. True if any was refused."""
+    refused_any = False
+    for namespace, chunks in sorted(grouped.items(), key=lambda kv: kv[0] or ""):
+        if not namespace:
+            print("\nprune: skipping the default namespace; no source writes there")
+            continue
+        plan = plan_prune(
+            namespace, store.list_ids(namespace), {c.vector_id for c in chunks}, max_fraction
+        )
+        print(f"\nprune namespace {namespace}: {len(plan.stale)} stale vector(s)")
+        for section, (lost, total) in plan.by_section.items():
+            print(f"  {section}: {lost} of {total}")
+        if plan.refused:
+            refused_any = True
+            print(f"  REFUSED: {plan.refused}")
+        elif plan.stale and dry_run:
+            print(f"  would delete, e.g. {', '.join(plan.stale[:5])}")
+        elif plan.stale:
+            store.delete_ids(list(plan.stale), namespace=namespace)
+            print(f"  deleted {len(plan.stale)}")
+    return refused_any
 
 
 if __name__ == "__main__":

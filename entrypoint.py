@@ -20,6 +20,7 @@ PORT = os.environ.get("PORT", "8080")
 JOB_MODULES = {
     "profiles": "preprocessing.sources.profiles.runner",
     "courses": "preprocessing.sources.courses.runner",
+    "programs": "preprocessing.sources.programs.runner",
     "schedule": "preprocessing.sources.schedule.runner",
     "weblinks": "preprocessing.sources.weblinks.runner",
     "publications": "preprocessing.sources.publications.runner",

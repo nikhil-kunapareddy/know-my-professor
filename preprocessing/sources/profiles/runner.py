@@ -38,6 +38,7 @@ from .fetcher import DirectoryFetcher
 from .llm_parser import LlmProfileParser, ThinProfilePage
 from .profile_parser import ProfileParser
 from .source import ProfileSource
+from .tiered import TieredProfileParser
 
 #: Concurrent extraction workers. Fetching stays serialized behind the college's
 #: crawl delay regardless -- this only overlaps the LLM calls, which are the
@@ -55,7 +56,7 @@ class ProfileScraper:
     def __init__(
         self,
         fetcher: DirectoryFetcher,
-        parser: ProfileParser | LlmProfileParser,
+        parser: ProfileParser | LlmProfileParser | TieredProfileParser,
         store: OutputStore,
         college: College | None = None,
         workers: int = DEFAULT_WORKERS,
@@ -122,9 +123,16 @@ class ProfileScraper:
         return profile.name or key
 
 
-def build_parser(college: College) -> ProfileParser | LlmProfileParser:
-    """The parser a college's profile template needs."""
-    return ProfileParser() if college.parser == "accordion" else LlmProfileParser()
+def build_parser(college: College) -> TieredProfileParser | LlmProfileParser:
+    """The parser a college's profile template needs.
+
+    An accordion college gets the exact DOM parser with Claude behind it as a
+    fallback, so a template change degrades to extraction instead of to a
+    directory of hollow records.
+    """
+    if college.parser == "accordion":
+        return TieredProfileParser(ProfileParser(), LlmProfileParser())
+    return LlmProfileParser()
 
 
 def _build_store(bucket: str | None) -> OutputStore:
