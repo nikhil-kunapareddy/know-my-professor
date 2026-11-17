@@ -1,13 +1,27 @@
-# Manual build + deploy for the three Cloud Run JOBS (not covered by CI).
-# Single deploy/Dockerfile selected via --build-arg COMPONENT; Cloud Build runs
-# on amd64 so this works from an arm64 Mac with no local Docker.
+# Build + deploy for the eight Cloud Run JOBS. Single deploy/Dockerfile
+# selected via --build-arg COMPONENT.
 #
+# CI: one trigger per job, `deploy-<job>`, fires on push to main when
+# preprocessing/**, shared/**, deploy/Dockerfile, this file, entrypoint.py or
+# pyproject.toml change, passing _COMPONENT/_JOB (added 2026-09-29):
+#   profiles/scrape-profiles        weblinks/crawl-weblinks
+#   courses/scrape-courses          schedule/scrape-term-schedule
+#   publications/fetch-publications grants/fetch-grants
+#   programs/scrape-programs        ingest/ingest-pinecone
+# So main is the source of truth for jobs as it is for the services; before
+# the triggers, jobs were rebuilt by hand and drifted from main.
+#
+# Manual (a hotfix, or bootstrapping a new job) -- Cloud Build runs on amd64,
+# so this works from an arm64 Mac with no local Docker:
 #   gcloud builds submit --config deploy/job.cloudbuild.yaml \
 #     --substitutions=_COMPONENT=ingest,_JOB=ingest-pinecone \
 #     --project=know-my-professor
 #
-# Env vars: set once on the job with `gcloud run jobs deploy --set-env-vars`;
-# the --image deploy below preserves them (and the runtime SA) on later builds.
+# Env vars and the runtime SA: set once on the job (`gcloud run jobs update
+# --service-account ... --set-env-vars ...`); the --image deploy below preserves
+# them on every later build. A NEW job must be created and configured BEFORE its
+# trigger first fires: `jobs deploy --image` creates a missing job with the
+# default compute SA and no env, so a run would write to the container's disk.
 
 steps:
   # Gate: lint + offline tests, same as the Service builds. A Job that crashes
