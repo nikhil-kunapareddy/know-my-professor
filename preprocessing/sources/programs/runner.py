@@ -1,12 +1,12 @@
 """
 Northeastern program requirements scraper (entrypoint).
 
-Reads the catalog sitemap, fetches every candidate program page (~1,600, 1s
-apart, so ~35 minutes), keeps the ones with a requirements tab, and writes one
-record per program to gs://<bucket>/programs/<slug>.json. A program whose
-``record_hash`` matches what is stored is not rewritten -- the catalog changes
-about once a year, and restating ~1,000 unchanged records monthly would spend
-GCS's free write quota on nothing.
+Reads the catalog sitemap, fetches every candidate program page (1,437 on
+2026-09-29, 1s apart: 29 minutes), keeps the ones with a requirements tab
+(1,203), and writes one record per program to gs://<bucket>/programs/<slug>.json.
+A program whose ``record_hash`` matches what is stored is not rewritten -- the
+catalog changes about once a year, and restating 1,200 unchanged records each
+run would spend GCS's free write quota on nothing.
 
 Usage:
     python -m preprocessing.sources.programs.runner --dry-run --limit 20
